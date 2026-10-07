@@ -82,6 +82,32 @@ function atualizarTudo() {
     renderizarBalanacoResultado();
 }
 
+// Renderiza as categorias dinamicamente mantendo a opção de seleção neutra
+function atualizarOpcoesCategoriasForm() {
+    const selectTipo = document.getElementById('trans-tipo');
+    const selectCat = document.getElementById('trans-categoria');
+    if (!selectTipo || !selectCat) return;
+
+    const tipo = selectTipo.value;
+    selectCat.innerHTML = '';
+
+    if (!tipo) {
+        selectCat.innerHTML = `<option value="" disabled selected>-- Selecione primeiro o Tipo --</option>`;
+        return;
+    }
+
+    selectCat.innerHTML = `<option value="" disabled selected>-- Selecione a Categoria --</option>`;
+
+    const filtradas = listaCategorias.filter(c => c.tipo === tipo);
+    if (filtradas.length === 0) {
+        selectCat.innerHTML += `<option value="Geral">Geral</option>`;
+    } else {
+        filtradas.forEach(c => {
+            selectCat.innerHTML += `<option value="${c.nome}">${c.nome}</option>`;
+        });
+    }
+}
+
 // Renderiza a tabela dentro da Tela de Entrada
 function renderizarTabelaEntrada() {
     const tabela = document.getElementById('tabela-registros-entrada');
@@ -250,25 +276,7 @@ function renderizarGraficoCategorias(catMap) {
     });
 }
 
-function atualizarOpcoesCategoriasForm() {
-    const selectTipo = document.getElementById('trans-tipo');
-    const selectCat = document.getElementById('trans-categoria');
-    if (!selectTipo || !selectCat) return;
-
-    const tipo = selectTipo.value;
-    selectCat.innerHTML = '';
-
-    const filtradas = listaCategorias.filter(c => c.tipo === tipo);
-    if (filtradas.length === 0) {
-        selectCat.innerHTML = `<option value="Geral">Geral</option>`;
-    } else {
-        filtradas.forEach(c => {
-            selectCat.innerHTML += `<option value="${c.nome}">${c.nome}</option>`;
-        });
-    }
-}
-
-// Função para salvar a informação e atualizar imediatamente as duas telas
+// Salva a transação e limpa o formulário resetando para a opção inicial dos campos
 async function salvarTransacaoEntrada(e) {
     e.preventDefault();
 
@@ -298,6 +306,9 @@ async function salvarTransacaoEntrada(e) {
         if (res.ok) {
             descEl.value = '';
             valEl.value = '';
+            tipoEl.selectedIndex = 0;
+            statEl.selectedIndex = 0;
+            atualizarOpcoesCategoriasForm();
 
             const badge = document.getElementById('badge-salvo');
             if (badge) {
@@ -305,7 +316,6 @@ async function salvarTransacaoEntrada(e) {
                 setTimeout(() => badge.classList.add('hidden'), 2500);
             }
 
-            // Recarrega os dados do servidor para atualizar instantaneamente as duas telas
             await carregarTransacoes();
         }
     } catch (err) {
