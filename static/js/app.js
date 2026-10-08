@@ -3,6 +3,14 @@ let categorias = [];
 let chartEvolucaoInstance = null;
 let chartCategoriasInstance = null;
 
+// Função auxiliar para formatar valores numéricos no padrão de moeda (R$ 1.234,56)
+function formatarMoeda(valor) {
+    return Number(valor).toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+    });
+}
+
 // Navegação entre Telas
 async function navegarPara(tela) {
     document.getElementById('tela-inicial').classList.add('hidden');
@@ -64,14 +72,16 @@ document.getElementById('trans-tipo').addEventListener('change', function() {
 // Ajusta o campo de data quando o Mês de Referência muda na Tela de Registro
 document.getElementById('registro-mes-referencia').addEventListener('change', function() {
     if (this.value) {
-        // Define a data do registro como o dia 1 do mês escolhido (ex: 2026-10-01)
         document.getElementById('trans-data').value = `${this.value}-01`;
     }
 });
 
-// Enviar Transação
+// Enviar Transação para o Backend Python
 document.getElementById('form-transacao-direta').addEventListener('submit', async function(e) {
     e.preventDefault();
+
+    const mesRefAtual = document.getElementById('registro-mes-referencia').value;
+    const dataSelecionada = document.getElementById('trans-data').value;
 
     const novaTransacao = {
         descricao: document.getElementById('trans-descricao').value,
@@ -79,7 +89,7 @@ document.getElementById('form-transacao-direta').addEventListener('submit', asyn
         tipo: document.getElementById('trans-tipo').value.toLowerCase(),
         categoria: document.getElementById('trans-categoria').value,
         status: document.getElementById('trans-status').value,
-        data: document.getElementById('trans-data').value
+        data: dataSelecionada
     };
 
     try {
@@ -92,10 +102,9 @@ document.getElementById('form-transacao-direta').addEventListener('submit', asyn
         if (res.ok) {
             this.reset();
             
-            // Mantém o Mês de Referência e ajusta a data para o dia padrão
-            const mesRef = document.getElementById('registro-mes-referencia').value || new Date().toISOString().slice(0, 7);
-            document.getElementById('registro-mes-referencia').value = mesRef;
-            document.getElementById('trans-data').value = `${mesRef}-01`;
+            // Mantém o mês e a data fixos conforme a escolha do utilizador
+            document.getElementById('registro-mes-referencia').value = mesRefAtual;
+            document.getElementById('trans-data').value = dataSelecionada;
             document.getElementById('trans-categoria').innerHTML = '<option value="" disabled selected>-- Selecione primeiro o Tipo --</option>';
             
             const badge = document.getElementById('badge-salvo');
@@ -127,7 +136,6 @@ function atualizarOpcoesFiltroMes() {
     const selectMes = document.getElementById('filtro-mes');
     const valorAtual = selectMes.value;
     
-    // Obtém todos os meses únicos no formato YYYY-MM presentes nas transações
     const mesesUnicos = [...new Set(transacoes.map(t => t.data.slice(0, 7)))].sort().reverse();
 
     selectMes.innerHTML = '<option value="">Todos os Meses</option>';
@@ -164,7 +172,7 @@ function renderizarTabelaEntrada() {
             <td class="p-3 text-slate-400">${t.data}</td>
             <td class="p-3 text-slate-400">${t.status}</td>
             <td class="p-3 text-right font-bold ${eReceita ? 'text-emerald-400' : 'text-rose-400'}">
-                ${eReceita ? '+' : '-'} R$ ${parseFloat(t.valor).toFixed(2)}
+                ${eReceita ? '+' : '-'} ${formatarMoeda(t.valor)}
             </td>
             <td class="p-3 text-right">
                 <button onclick="excluirTransacao(${t.id})" class="text-rose-400 hover:text-rose-300 font-bold px-2 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-xs">
@@ -197,7 +205,6 @@ function atualizarDashboard() {
     const filtroTipo = document.getElementById('filtro-tipo').value.toLowerCase();
 
     let transacoesFiltradas = transacoes.filter(t => {
-        // Se filtroMes estiver vazio (""), mostra TODOS os meses
         const bateMes = filtroMes ? t.data.startsWith(filtroMes) : true;
         const bateBusca = t.descricao.toLowerCase().includes(filtroBusca) || t.categoria.toLowerCase().includes(filtroBusca);
         const bateTipo = filtroTipo === 'todos' ? true : t.tipo.toLowerCase() === filtroTipo;
@@ -215,11 +222,12 @@ function atualizarDashboard() {
     const saldoTotal = totalReceitas - totalDespesas;
     const taxaComprometimento = totalReceitas > 0 ? ((totalDespesas / totalReceitas) * 100).toFixed(1) : 0;
 
-    document.getElementById('total-receitas').innerText = `R$ ${totalReceitas.toFixed(2)}`;
-    document.getElementById('total-despesas').innerText = `R$ ${totalDespesas.toFixed(2)}`;
+    // Aplicação da formatação legível nos cards
+    document.getElementById('total-receitas').innerText = formatarMoeda(totalReceitas);
+    document.getElementById('total-despesas').innerText = formatarMoeda(totalDespesas);
     
     const elSaldo = document.getElementById('saldo-total');
-    elSaldo.innerText = `R$ ${saldoTotal.toFixed(2)}`;
+    elSaldo.innerText = formatarMoeda(saldoTotal);
     elSaldo.className = `text-2xl font-extrabold mt-2 ${saldoTotal >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
 
     document.getElementById('dash-taxa').innerText = `${taxaComprometimento}%`;
@@ -243,7 +251,7 @@ function atualizarDashboard() {
                 <td class="p-3 text-slate-400">${t.data}</td>
                 <td class="p-3 text-slate-400">${t.status}</td>
                 <td class="p-3 text-right font-bold ${eReceita ? 'text-emerald-400' : 'text-rose-400'}">
-                    ${eReceita ? '+' : '-'} R$ ${parseFloat(t.valor).toFixed(2)}
+                    ${eReceita ? '+' : '-'} ${formatarMoeda(t.valor)}
                 </td>
             `;
             tbody.appendChild(tr);
@@ -265,7 +273,7 @@ function renderizarGraficos(receitas, despesas, listaFiltrada) {
             data: {
                 labels: ['Receitas', 'Despesas'],
                 datasets: [{
-                    label: 'Total (R$)',
+                    label: 'Total',
                     data: [receitas, despesas],
                     backgroundColor: ['#10B981', '#F43F5E'],
                     borderRadius: 8
@@ -326,7 +334,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const hoje = new Date();
     const anoMesAtual = hoje.toISOString().slice(0, 7);
     
-    // Configura o mês de referência padrão e a data do registro
     document.getElementById('registro-mes-referencia').value = anoMesAtual;
     document.getElementById('trans-data').value = hoje.toISOString().split('T')[0];
 
