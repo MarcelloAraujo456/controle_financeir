@@ -4,7 +4,7 @@ let chartEvolucaoInstance = null;
 let chartCategoriasInstance = null;
 
 // Navegação entre Telas
-function navegarPara(tela) {
+async function navegarPara(tela) {
     document.getElementById('tela-inicial').classList.add('hidden');
     document.getElementById('tela-entrada').classList.add('hidden');
     document.getElementById('tela-resultado').classList.add('hidden');
@@ -29,27 +29,28 @@ function navegarPara(tela) {
     } else if (tela === 'resultado') {
         document.getElementById('tela-resultado').classList.remove('hidden');
         btnResultado.className = estiloAtivo;
+        await carregarTransacoes();
+        atualizarOpcoesFiltroMes();
         atualizarDashboard();
     }
 }
 
-// Carregar Categorias da API Python
+// Carregar Categorias
 async function carregarCategorias() {
     try {
         const res = await fetch('/api/categorias');
         categorias = await res.json();
     } catch (err) {
-        console.error("Erro ao carregar categorias do backend:", err);
+        console.error("Erro ao carregar categorias:", err);
     }
 }
 
-// Atualiza o select de Categoria com base no Tipo selecionado
+// Atualizar select de Categorias pelo Tipo
 document.getElementById('trans-tipo').addEventListener('change', function() {
     const tipoSelecionado = this.value.toLowerCase();
     const selectCategoria = document.getElementById('trans-categoria');
     selectCategoria.innerHTML = '<option value="" disabled selected>-- Selecione a Categoria --</option>';
 
-    // Filtra as categorias vindas do backend pelo tipo ('despesa' ou 'receita')
     const filtradas = categorias.filter(c => c.tipo.toLowerCase() === tipoSelecionado);
 
     filtradas.forEach(cat => {
@@ -60,7 +61,15 @@ document.getElementById('trans-tipo').addEventListener('change', function() {
     });
 });
 
-// Enviar Transação para o Backend Python
+// Ajusta o campo de data quando o Mês de Referência muda na Tela de Registro
+document.getElementById('registro-mes-referencia').addEventListener('change', function() {
+    if (this.value) {
+        // Define a data do registro como o dia 1 do mês escolhido (ex: 2026-10-01)
+        document.getElementById('trans-data').value = `${this.value}-01`;
+    }
+});
+
+// Enviar Transação
 document.getElementById('form-transacao-direta').addEventListener('submit', async function(e) {
     e.preventDefault();
 
@@ -82,11 +91,18 @@ document.getElementById('form-transacao-direta').addEventListener('submit', asyn
 
         if (res.ok) {
             this.reset();
+            
+            // Mantém o Mês de Referência e ajusta a data para o dia padrão
+            const mesRef = document.getElementById('registro-mes-referencia').value || new Date().toISOString().slice(0, 7);
+            document.getElementById('registro-mes-referencia').value = mesRef;
+            document.getElementById('trans-data').value = `${mesRef}-01`;
             document.getElementById('trans-categoria').innerHTML = '<option value="" disabled selected>-- Selecione primeiro o Tipo --</option>';
             
             const badge = document.getElementById('badge-salvo');
-            badge.classList.remove('hidden');
-            setTimeout(() => badge.classList.add('hidden'), 3000);
+            if (badge) {
+                badge.classList.remove('hidden');
+                setTimeout(() => badge.classList.add('hidden'), 3000);
+            }
 
             await carregarTransacoes();
         }
@@ -95,7 +111,7 @@ document.getElementById('form-transacao-direta').addEventListener('submit', asyn
     }
 });
 
-// Carregar Transações da API Python
+// Carregar Transações
 async function carregarTransacoes() {
     try {
         const res = await fetch('/api/transacoes');
@@ -106,9 +122,31 @@ async function carregarTransacoes() {
     }
 }
 
-// Renderizar Tabela na Tela de Registo
+// Popula o filtro de meses dinamicamente com base nas transações cadastradas
+function atualizarOpcoesFiltroMes() {
+    const selectMes = document.getElementById('filtro-mes');
+    const valorAtual = selectMes.value;
+    
+    // Obtém todos os meses únicos no formato YYYY-MM presentes nas transações
+    const mesesUnicos = [...new Set(transacoes.map(t => t.data.slice(0, 7)))].sort().reverse();
+
+    selectMes.innerHTML = '<option value="">Todos os Meses</option>';
+    
+    mesesUnicos.forEach(m => {
+        const [ano, mes] = m.split('-');
+        const option = document.createElement('option');
+        option.value = m;
+        option.textContent = `${mes}/${ano}`;
+        selectMes.appendChild(option);
+    });
+
+    selectMes.value = valorAtual;
+}
+
+// Renderizar Tabela na Tela de Registro
 function renderizarTabelaEntrada() {
     const tbody = document.getElementById('tabela-registros-entrada');
+    if (!tbody) return;
     tbody.innerHTML = '';
 
     transacoes.slice().reverse().forEach(t => {
@@ -138,12 +176,14 @@ function renderizarTabelaEntrada() {
     });
 }
 
-// Excluir Transação via API Python
+// Excluir Transação
 async function excluirTransacao(id) {
     try {
         const res = await fetch(`/api/transacoes/${id}`, { method: 'DELETE' });
         if (res.ok) {
             await carregarTransacoes();
+            atualizarOpcoesFiltroMes();
+            atualizarDashboard();
         }
     } catch (err) {
         console.error("Erro ao apagar transação:", err);
@@ -157,6 +197,7 @@ function atualizarDashboard() {
     const filtroTipo = document.getElementById('filtro-tipo').value.toLowerCase();
 
     let transacoesFiltradas = transacoes.filter(t => {
+        // Se filtroMes estiver vazio (""), mostra TODOS os meses
         const bateMes = filtroMes ? t.data.startsWith(filtroMes) : true;
         const bateBusca = t.descricao.toLowerCase().includes(filtroBusca) || t.categoria.toLowerCase().includes(filtroBusca);
         const bateTipo = filtroTipo === 'todos' ? true : t.tipo.toLowerCase() === filtroTipo;
@@ -184,87 +225,95 @@ function atualizarDashboard() {
     document.getElementById('dash-taxa').innerText = `${taxaComprometimento}%`;
 
     const tbody = document.getElementById('lista-transacoes');
-    tbody.innerHTML = '';
+    if (tbody) {
+        tbody.innerHTML = '';
 
-    transacoesFiltradas.forEach(t => {
-        const tr = document.createElement('tr');
-        const eReceita = t.tipo.toLowerCase() === 'receita';
-        
-        tr.innerHTML = `
-            <td class="p-3 font-medium text-white">${t.descricao}</td>
-            <td class="p-3">
-                <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${eReceita ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">
-                    ${t.tipo}
-                </span>
-            </td>
-            <td class="p-3 text-slate-400">${t.categoria}</td>
-            <td class="p-3 text-slate-400">${t.data}</td>
-            <td class="p-3 text-slate-400">${t.status}</td>
-            <td class="p-3 text-right font-bold ${eReceita ? 'text-emerald-400' : 'text-rose-400'}">
-                ${eReceita ? '+' : '-'} R$ ${parseFloat(t.valor).toFixed(2)}
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
+        transacoesFiltradas.forEach(t => {
+            const tr = document.createElement('tr');
+            const eReceita = t.tipo.toLowerCase() === 'receita';
+            
+            tr.innerHTML = `
+                <td class="p-3 font-medium text-white">${t.descricao}</td>
+                <td class="p-3">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${eReceita ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">
+                        ${t.tipo}
+                    </span>
+                </td>
+                <td class="p-3 text-slate-400">${t.categoria}</td>
+                <td class="p-3 text-slate-400">${t.data}</td>
+                <td class="p-3 text-slate-400">${t.status}</td>
+                <td class="p-3 text-right font-bold ${eReceita ? 'text-emerald-400' : 'text-rose-400'}">
+                    ${eReceita ? '+' : '-'} R$ ${parseFloat(t.valor).toFixed(2)}
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
 
     renderizarGraficos(totalReceitas, totalDespesas, transacoesFiltradas);
 }
 
 // Renderizar Gráficos
 function renderizarGraficos(receitas, despesas, listaFiltrada) {
-    const ctxEvolucao = document.getElementById('chartEvolucao').getContext('2d');
-    if (chartEvolucaoInstance) chartEvolucaoInstance.destroy();
+    const elChartEvolucao = document.getElementById('chartEvolucao');
+    if (elChartEvolucao) {
+        const ctxEvolucao = elChartEvolucao.getContext('2d');
+        if (chartEvolucaoInstance) chartEvolucaoInstance.destroy();
 
-    chartEvolucaoInstance = new Chart(ctxEvolucao, {
-        type: 'bar',
-        data: {
-            labels: ['Receitas', 'Despesas'],
-            datasets: [{
-                label: 'Total (R$)',
-                data: [receitas, despesas],
-                backgroundColor: ['#10B981', '#F43F5E'],
-                borderRadius: 8
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-                y: { ticks: { color: '#94A3B8' }, grid: { color: '#334155' } },
-                x: { ticks: { color: '#94A3B8' }, grid: { display: false } }
+        chartEvolucaoInstance = new Chart(ctxEvolucao, {
+            type: 'bar',
+            data: {
+                labels: ['Receitas', 'Despesas'],
+                datasets: [{
+                    label: 'Total (R$)',
+                    data: [receitas, despesas],
+                    backgroundColor: ['#10B981', '#F43F5E'],
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { ticks: { color: '#94A3B8' }, grid: { color: '#334155' } },
+                    x: { ticks: { color: '#94A3B8' }, grid: { display: false } }
+                }
             }
-        }
-    });
+        });
+    }
 
-    const categoriasMap = {};
-    listaFiltrada.filter(t => t.tipo.toLowerCase() === 'despesa').forEach(t => {
-        categoriasMap[t.categoria] = (categoriasMap[t.categoria] || 0) + parseFloat(t.valor);
-    });
+    const elChartCategorias = document.getElementById('chartCategorias');
+    if (elChartCategorias) {
+        const categoriasMap = {};
+        listaFiltrada.filter(t => t.tipo.toLowerCase() === 'despesa').forEach(t => {
+            categoriasMap[t.categoria] = (categoriasMap[t.categoria] || 0) + parseFloat(t.valor);
+        });
 
-    const labelsCat = Object.keys(categoriasMap);
-    const valoresCat = Object.values(categoriasMap);
+        const labelsCat = Object.keys(categoriasMap);
+        const valoresCat = Object.values(categoriasMap);
 
-    const ctxCategorias = document.getElementById('chartCategorias').getContext('2d');
-    if (chartCategoriasInstance) chartCategoriasInstance.destroy();
+        const ctxCategorias = elChartCategorias.getContext('2d');
+        if (chartCategoriasInstance) chartCategoriasInstance.destroy();
 
-    chartCategoriasInstance = new Chart(ctxCategorias, {
-        type: 'doughnut',
-        data: {
-            labels: labelsCat.length ? labelsCat : ['Sem despesas'],
-            datasets: [{
-                data: valoresCat.length ? valoresCat : [1],
-                backgroundColor: ['#6366F1', '#EC4899', '#8B5CF6', '#F59E0B', '#10B981', '#3B82F6', '#64748B']
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'bottom', labels: { color: '#94A3B8', boxWidth: 12 } }
+        chartCategoriasInstance = new Chart(ctxCategorias, {
+            type: 'doughnut',
+            data: {
+                labels: labelsCat.length ? labelsCat : ['Sem despesas'],
+                datasets: [{
+                    data: valoresCat.length ? valoresCat : [1],
+                    backgroundColor: ['#6366F1', '#EC4899', '#8B5CF6', '#F59E0B', '#10B981', '#3B82F6', '#64748B']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#94A3B8', boxWidth: 12 } }
+                }
             }
-        }
-    });
+        });
+    }
 }
 
 // Event Listeners dos Filtros
@@ -274,7 +323,13 @@ document.getElementById('filtro-tipo').addEventListener('change', atualizarDashb
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', async () => {
-    document.getElementById('trans-data').value = new Date().toISOString().split('T')[0];
+    const hoje = new Date();
+    const anoMesAtual = hoje.toISOString().slice(0, 7);
+    
+    // Configura o mês de referência padrão e a data do registro
+    document.getElementById('registro-mes-referencia').value = anoMesAtual;
+    document.getElementById('trans-data').value = hoje.toISOString().split('T')[0];
+
     await carregarCategorias();
     await carregarTransacoes();
     navegarPara('inicial');
