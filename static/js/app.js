@@ -329,6 +329,18 @@ document.getElementById('filtro-mes').addEventListener('change', atualizarDashbo
 document.getElementById('filtro-busca').addEventListener('input', atualizarDashboard);
 document.getElementById('filtro-tipo').addEventListener('change', atualizarDashboard);
 
+// Função para encerrar a sessão e voltar para a tela de Login
+async function fazerLogout() {
+    try {
+        const res = await fetch('/api/logout', { method: 'POST' });
+        if (res.ok) {
+            window.location.reload();
+        }
+    } catch (err) {
+        console.error("Erro ao encerrar sessão:", err);
+    }
+}
+
 // Inicialização
 document.addEventListener('DOMContentLoaded', async () => {
     const hoje = new Date();

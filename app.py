@@ -1,88 +1,194 @@
-from flask import Flask, render_template, request, jsonify
+import sqlite3
+import os
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
+app.secret_key = 'sua_chave_secreta_super_segura_aqui'  # Chave para gerir sessões de login
 
-# Lista expandida e completa de categorias padrão
-categorias = [
-    # Categorias de Despesa
-    {"id": 1, "nome": "Alimentação", "tipo": "despesa", "cor": "#ef4444"},
-    {"id": 2, "nome": "Moradia", "tipo": "despesa", "cor": "#f59e0b"},
-    {"id": 3, "nome": "Transporte", "tipo": "despesa", "cor": "#ec4899"},
-    {"id": 4, "nome": "Lazer", "tipo": "despesa", "cor": "#8b5cf6"},
-    {"id": 5, "nome": "Saúde", "tipo": "despesa", "cor": "#06b6d4"},
-    {"id": 6, "nome": "Educação", "tipo": "despesa", "cor": "#3b82f6"},
-    {"id": 7, "nome": "Outros", "tipo": "despesa", "cor": "#64748b"},
+DB_NAME = "database/financeiro.db"
 
-    # Categorias de Receita
-    {"id": 8, "nome": "Salário", "tipo": "receita", "cor": "#10b981"},
-    {"id": 9, "nome": "Investimentos", "tipo": "receita", "cor": "#059669"},
-    {"id": 10, "nome": "Freelance", "tipo": "receita", "cor": "#047857"},
-    {"id": 11, "nome": "Presente", "tipo": "receita", "cor": "#14b8a6"},
-    {"id": 12, "nome": "Outros", "tipo": "receita", "cor": "#10b981"}
-]
+def get_db():
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    return conn
 
-# Banco de dados temporário em memória para armazenar as transações
-transacoes = []
+def init_db():
+    os.makedirs('database', exist_ok=True)
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # Tabela de Utilizadores
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS usuarios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            senha_hash TEXT NOT NULL,
+            is_admin INTEGER DEFAULT 0
+        )
+    ''')
+    
+    # Tabela de Transações (isolada por usuario_id)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS transacoes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario_id INTEGER NOT NULL,
+            descricao TEXT NOT NULL,
+            valor REAL NOT NULL,
+            tipo TEXT NOT NULL,
+            categoria TEXT NOT NULL,
+            status TEXT NOT NULL,
+            data TEXT NOT NULL,
+            FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
+        )
+    ''')
 
-# Rota principal para carregar o aplicativo HTML
+    # Tabela de Categorias
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS categorias (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            tipo TEXT NOT NULL
+        )
+    ''')
+
+    cursor.execute("SELECT COUNT(*) FROM categorias")
+    if cursor.fetchone()[0] == 0:
+        cats = [
+            ('Salário', 'receita'), ('Investimentos', 'receita'), ('Freelance', 'receita'), ('Presente', 'receita'),
+            ('Alimentação', 'despesa'), ('Moradia', 'despesa'), ('Transporte', 'despesa'),
+            ('Lazer', 'despesa'), ('Saúde', 'despesa'), ('Educação', 'despesa'), ('Outros', 'despesa')
+        ]
+        cursor.executemany("INSERT INTO categorias (nome, tipo) VALUES (?, ?)", cats)
+
+    conn.commit()
+    conn.close()
+
+init_db()
+
+# --- ROTAS DE AUTENTICAÇÃO ---
+
 @app.route('/')
 def index():
-    return render_template('index.html')
+    if 'usuario_id' not in session:
+        return render_template('login.html')
+    return render_template('index.html', usuario_nome=session.get('usuario_nome'))
 
-# API: Listar todas as Categorias
-@app.route('/api/categorias', methods=['GET'])
-def get_categorias():
-    return jsonify(categorias)
-
-# API: Cadastrar Nova Categoria dinamicamente
-@app.route('/api/categorias', methods=['POST'])
-def add_categoria():
+@app.route('/api/cadastro', methods=['POST'])
+def cadastro():
     dados = request.get_json() or {}
+    nome = dados.get('nome')
+    email = dados.get('email', '').strip().lower()
+    senha = dados.get('senha')
+
+    if not nome or not email or not senha:
+        return jsonify({'error': 'Preencha todos os campos.'}), 400
+
+    senha_hash = generate_password_hash(senha)
+
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("INSERT INTO usuarios (nome, email, senha_hash) VALUES (?, ?, ?)", (nome, email, senha_hash))
+        conn.commit()
+        
+        usuario_id = cursor.lastrowid
+        session['usuario_id'] = usuario_id
+        session['usuario_nome'] = nome
+        session['is_admin'] = 0
+
+        conn.close()
+        return jsonify({'message': 'Conta criada com sucesso!'}), 201
+    except sqlite3.IntegrityError:
+        conn.close()
+        return jsonify({'error': 'Este e-mail já está cadastrado.'}), 400
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    dados = request.get_json() or {}
+    email = dados.get('email', '').strip().lower()
+    senha = dados.get('senha')
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, nome, senha_hash, is_admin FROM usuarios WHERE email = ?", (email,))
+    user = cursor.fetchone()
+    conn.close()
+
+    if user and check_password_hash(user['senha_hash'], senha):
+        session['usuario_id'] = user['id']
+        session['usuario_nome'] = user['nome']
+        session['is_admin'] = user['is_admin']
+        return jsonify({'message': 'Login realizado com sucesso!'})
     
-    if not dados.get("nome"):
-        return jsonify({"erro": "O nome da categoria é obrigatório"}), 400
+    return jsonify({'error': 'E-mail ou senha incorretos.'}), 401
 
-    nova_cat = {
-        "id": len(categorias) + 1,
-        "nome": dados.get("nome"),
-        "tipo": str(dados.get("tipo", "despesa")).lower(),
-        "cor": dados.get("cor", "#6366f1")
-    }
-    categorias.append(nova_cat)
-    return jsonify({"sucesso": True, "categoria": nova_cat}), 201
+@app.route('/api/logout', methods=['POST'])
+def logout():
+    session.clear()
+    return jsonify({'message': 'Sessão encerrada.'})
 
-# API: Listar todas as Transações
+# --- ROTAS DE TRANSAÇÕES (ISOLADAS POR UTILIZADOR) ---
+
 @app.route('/api/transacoes', methods=['GET'])
 def get_transacoes():
-    return jsonify(transacoes)
+    if 'usuario_id' not in session:
+        return jsonify({'error': 'Não autorizado'}), 401
 
-# API: Adicionar uma Nova Transação
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM transacoes WHERE usuario_id = ? ORDER BY data DESC", (session['usuario_id'],))
+    rows = cursor.fetchall()
+    conn.close()
+
+    resultado = [dict(row) for row in rows]
+    return jsonify(resultado)
+
 @app.route('/api/transacoes', methods=['POST'])
 def add_transacao():
+    if 'usuario_id' not in session:
+        return jsonify({'error': 'Não autorizado'}), 401
+
     dados = request.get_json() or {}
-    
-    # Validação simples de campos obrigatórios
-    if not dados.get("descricao") or dados.get("valor") is None:
-        return jsonify({"erro": "Descrição e valor são obrigatórios"}), 400
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO transacoes (usuario_id, descricao, valor, tipo, categoria, status, data)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        session['usuario_id'],
+        dados.get('descricao'),
+        float(dados.get('valor', 0)),
+        str(dados.get('tipo', 'despesa')).lower(),
+        dados.get('categoria', 'Outros'),
+        dados.get('status', 'Pago/Recebido'),
+        dados.get('data')
+    ))
+    conn.commit()
+    conn.close()
+    return jsonify({'message': 'Transação salva com sucesso!'}), 201
 
-    nova_transacao = {
-        "id": len(transacoes) + 1 if not transacoes else max(t["id"] for t in transacoes) + 1,
-        "descricao": dados.get("descricao"),
-        "valor": float(dados.get("valor", 0)),
-        "tipo": str(dados.get("tipo", "despesa")).lower(),
-        "categoria": dados.get("categoria", "Outros"),
-        "status": dados.get("status", "Pago/Recebido"),
-        "data": dados.get("data")
-    }
-    transacoes.append(nova_transacao)
-    return jsonify({"sucesso": True, "transacao": nova_transacao}), 201
-
-# API: Excluir Transação pelo ID
 @app.route('/api/transacoes/<int:transacao_id>', methods=['DELETE'])
 def delete_transacao(transacao_id):
-    global transacoes
-    transacoes = [t for t in transacoes if t["id"] != transacao_id]
-    return jsonify({"sucesso": True, "mensagem": "Transação removida com sucesso"}), 200
+    if 'usuario_id' not in session:
+        return jsonify({'error': 'Não autorizado'}), 401
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM transacoes WHERE id = ? AND usuario_id = ?", (transacao_id, session['usuario_id']))
+    conn.commit()
+    conn.close()
+    return jsonify({'message': 'Transação removida.'})
+
+@app.route('/api/categorias', methods=['GET'])
+def get_categorias():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM categorias")
+    rows = cursor.fetchall()
+    conn.close()
+    return jsonify([dict(row) for row in rows])
 
 if __name__ == '__main__':
     app.run(debug=True)
