@@ -38,7 +38,7 @@ async function navegarPara(tela) {
         document.getElementById('tela-resultado').classList.remove('hidden');
         btnResultado.className = estiloAtivo;
         await carregarTransacoes();
-        atualizarOpcoesFiltroMes();
+        atualizarOpcoesFiltroData();
         atualizarDashboard();
     }
 }
@@ -131,15 +131,30 @@ async function carregarTransacoes() {
     }
 }
 
-// Popula o filtro de meses dinamicamente com base nas transações cadastradas
-function atualizarOpcoesFiltroMes() {
+// Popula os filtros de anos e meses dinamicamente com base nas transações cadastradas
+function atualizarOpcoesFiltroData() {
     const selectMes = document.getElementById('filtro-mes');
-    const valorAtual = selectMes.value;
+    const selectAno = document.getElementById('filtro-ano');
     
+    const valorMesAtual = selectMes.value;
+    const valorAnoAtual = selectAno ? selectAno.value : '';
+    
+    // Extrai anos e meses únicos das transações
+    const anosUnicos = [...new Set(transacoes.map(t => t.data.slice(0, 4)))].sort().reverse();
     const mesesUnicos = [...new Set(transacoes.map(t => t.data.slice(0, 7)))].sort().reverse();
 
+    if (selectAno) {
+        selectAno.innerHTML = '<option value="">Todos os Anos</option>';
+        anosUnicos.forEach(a => {
+            const option = document.createElement('option');
+            option.value = a;
+            option.textContent = a;
+            selectAno.appendChild(option);
+        });
+        selectAno.value = valorAnoAtual;
+    }
+
     selectMes.innerHTML = '<option value="">Todos os Meses</option>';
-    
     mesesUnicos.forEach(m => {
         const [ano, mes] = m.split('-');
         const option = document.createElement('option');
@@ -148,7 +163,7 @@ function atualizarOpcoesFiltroMes() {
         selectMes.appendChild(option);
     });
 
-    selectMes.value = valorAtual;
+    selectMes.value = valorMesAtual;
 }
 
 // Renderizar Tabela na Tela de Registro
@@ -190,7 +205,7 @@ async function excluirTransacao(id) {
         const res = await fetch(`/api/transacoes/${id}`, { method: 'DELETE' });
         if (res.ok) {
             await carregarTransacoes();
-            atualizarOpcoesFiltroMes();
+            atualizarOpcoesFiltroData();
             atualizarDashboard();
         }
     } catch (err) {
@@ -200,15 +215,17 @@ async function excluirTransacao(id) {
 
 // Atualizar Dashboard e Relatórios
 function atualizarDashboard() {
+    const filtroAno = document.getElementById('filtro-ano') ? document.getElementById('filtro-ano').value : '';
     const filtroMes = document.getElementById('filtro-mes').value;
     const filtroBusca = document.getElementById('filtro-busca').value.toLowerCase();
     const filtroTipo = document.getElementById('filtro-tipo').value.toLowerCase();
 
     let transacoesFiltradas = transacoes.filter(t => {
+        const bateAno = filtroAno ? t.data.startsWith(filtroAno) : true;
         const bateMes = filtroMes ? t.data.startsWith(filtroMes) : true;
         const bateBusca = t.descricao.toLowerCase().includes(filtroBusca) || t.categoria.toLowerCase().includes(filtroBusca);
         const bateTipo = filtroTipo === 'todos' ? true : t.tipo.toLowerCase() === filtroTipo;
-        return bateMes && bateBusca && bateTipo;
+        return bateAno && bateMes && bateBusca && bateTipo;
     });
 
     let totalReceitas = 0;
@@ -325,6 +342,10 @@ function renderizarGraficos(receitas, despesas, listaFiltrada) {
 }
 
 // Event Listeners dos Filtros
+const elFiltroAno = document.getElementById('filtro-ano');
+if (elFiltroAno) {
+    elFiltroAno.addEventListener('change', atualizarDashboard);
+}
 document.getElementById('filtro-mes').addEventListener('change', atualizarDashboard);
 document.getElementById('filtro-busca').addEventListener('input', atualizarDashboard);
 document.getElementById('filtro-tipo').addEventListener('change', atualizarDashboard);

@@ -6,45 +6,45 @@
     <title>Login - Controle Financeiro</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center p-4">
 
-    <div class="bg-white p-8 rounded-3xl border border-gray-200 shadow-md w-full max-w-md">
+    <div class="bg-slate-900 p-8 rounded-3xl border border-slate-800 shadow-xl w-full max-w-md">
         
         <div class="text-center mb-6">
             <div class="bg-indigo-600 text-white w-12 h-12 rounded-2xl flex items-center justify-center mx-auto text-2xl mb-2">
                 💰
             </div>
-            <h1 class="text-2xl font-bold text-gray-900" id="titulo-tela">Entrar na sua conta</h1>
-            <p class="text-xs text-gray-500 mt-1" id="subtitulo-tela">Gerencie suas finanças de forma privativa e segura</p>
+            <h1 class="text-2xl font-bold text-white" id="titulo-tela">Entrar na sua conta</h1>
+            <p class="text-xs text-slate-400 mt-1" id="subtitulo-tela">Gerencie suas finanças de forma privativa e segura</p>
         </div>
 
         <!-- MENSAGEM DE ERRO -->
-        <div id="msg-erro" class="hidden mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl font-medium"></div>
+        <div id="msg-erro" class="hidden mb-4 p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs rounded-xl font-medium text-center"></div>
 
-        <!-- FORMULÁRIO DE LOGIN / CADASTRO -->
+        <!-- FORMULÁRIO DE LOGIN E CADASTRO -->
         <form id="form-login" class="space-y-4">
             <div id="campo-nome" class="hidden">
-                <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Seu Nome</label>
-                <input type="text" id="login-nome" placeholder="Seu nome completo" class="w-full bg-gray-50 border border-gray-300 rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500">
+                <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Seu Nome</label>
+                <input type="text" id="login-nome" placeholder="Seu nome completo" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-indigo-500">
             </div>
 
             <div>
-                <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">E-mail</label>
-                <input type="email" id="login-email" required placeholder="seu@email.com" class="w-full bg-gray-50 border border-gray-300 rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500">
+                <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">E-mail</label>
+                <input type="email" id="login-email" required placeholder="seu@email.com" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-indigo-500">
             </div>
 
             <div>
-                <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Senha</label>
-                <input type="password" id="login-senha" required placeholder="••••••••" class="w-full bg-gray-50 border border-gray-300 rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500">
+                <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Senha</label>
+                <input type="password" id="login-senha" required placeholder="••••••••" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-indigo-500">
             </div>
 
-            <button type="submit" id="btn-submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl transition shadow-md shadow-indigo-600/20 text-sm">
+            <button type="submit" id="btn-submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-indigo-600/20 text-sm">
                 Entrar
             </button>
         </form>
 
         <div class="mt-6 text-center">
-            <button id="btn-alternar" onclick="alternarModo()" class="text-xs text-indigo-600 font-semibold hover:underline">
+            <button id="btn-alternar" onclick="alternarModo()" class="text-xs text-indigo-400 font-semibold hover:underline">
                 Não tem uma conta? Cadastre-se gratuitamente
             </button>
         </div>

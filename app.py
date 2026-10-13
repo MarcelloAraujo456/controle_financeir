@@ -4,7 +4,7 @@ from flask import Flask, render_template, request, jsonify, session, redirect, u
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.secret_key = 'sua_chave_secreta_super_segura_aqui'  # Chave para gerir sessões de login
+app.secret_key = 'sua_chave_secreta_super_segura_aqui'
 
 DB_NAME = "database/financeiro.db"
 
@@ -191,4 +191,4 @@ def get_categorias():
     return jsonify([dict(row) for row in rows])
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=5000)
