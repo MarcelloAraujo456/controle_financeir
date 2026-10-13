@@ -11,33 +11,32 @@
 
     <!-- BARRA DE NAVEGAÇÃO SUPERIOR -->
     <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-50">
-        <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
             <div class="flex items-center gap-3">
-                <div class="bg-indigo-600 p-2 rounded-xl">
+                <div class="bg-indigo-600 p-2 rounded-xl text-white">
                     💰
                 </div>
                 <div>
-                    <h1 class="text-lg font-bold text-white leading-tight">Controle Financeiro</h1>
-                    <p class="text-xs text-slate-400">Gestão Pessoal & Inteligente</p>
+                    <h1 class="text-base sm:text-lg font-bold text-white leading-tight">Controle Financeiro</h1>
+                    <p class="text-[11px] text-slate-400">Gestão Pessoal & Inteligente</p>
                 </div>
             </div>
 
-            <div class="flex items-center gap-3">
-                <nav class="flex items-center gap-2 bg-slate-950 p-1.5 rounded-2xl border border-slate-800">
-                    <button id="nav-tela-inicial" onclick="navegarPara('inicial')" class="text-xs font-semibold px-4 py-2 rounded-xl transition bg-indigo-600 text-white">
+            <div class="flex flex-wrap items-center justify-center sm:justify-end gap-2 w-full sm:w-auto">
+                <nav class="flex items-center gap-1 bg-slate-950 p-1 rounded-2xl border border-slate-800 text-xs">
+                    <button id="nav-tela-inicial" onclick="navegarPara('inicial')" class="px-3 py-2 rounded-xl transition bg-indigo-600 text-white font-semibold">
                         🏠 Início
                     </button>
-                    <button id="nav-tela-entrada" onclick="navegarPara('entrada')" class="text-xs font-semibold px-4 py-2 rounded-xl transition bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700">
+                    <button id="nav-tela-entrada" onclick="navegarPara('entrada')" class="px-3 py-2 rounded-xl transition bg-slate-800 text-slate-300 hover:bg-slate-700">
                         ✍️ Novo Registro
                     </button>
-                    <button id="nav-tela-resultado" onclick="navegarPara('resultado')" class="text-xs font-semibold px-4 py-2 rounded-xl transition bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700">
-                        📊 Ver Resultado Final
+                    <button id="nav-tela-resultado" onclick="navegarPara('resultado')" class="px-3 py-2 rounded-xl transition bg-slate-800 text-slate-300 hover:bg-slate-700">
+                        📊 Painel
                     </button>
                 </nav>
 
-                <!-- USUÁRIO CONECTADO & BOTÃO SAIR -->
-                <div class="flex items-center gap-2 border-l border-slate-800 pl-3">
-                    <span class="text-xs font-bold text-slate-300">👤 {{ usuario_nome }}</span>
+                <div class="flex items-center gap-2 border-l border-slate-800 pl-2">
+                    <span class="text-xs font-bold text-slate-300 max-w-[120px] truncate">👤 {{ usuario_nome }}</span>
                     <button onclick="fazerLogout()" class="text-xs font-bold px-3 py-2 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition">
                         🚪 Sair
                     </button>
@@ -46,26 +45,26 @@
         </div>
     </header>
 
-    <main class="max-w-6xl mx-auto px-4 mt-8">
+    <main class="max-w-6xl mx-auto px-4 mt-6">
 
         <!-- TELA 1: INICIAL / BOAS-VINDAS -->
         <section id="tela-inicial" class="space-y-6">
-            <div class="bg-gradient-to-r from-indigo-900/40 via-slate-900 to-slate-900 border border-indigo-500/20 rounded-3xl p-8 sm:p-12 text-center sm:text-left relative overflow-hidden">
+            <div class="bg-gradient-to-r from-indigo-900/40 via-slate-900 to-slate-900 border border-indigo-500/20 rounded-3xl p-6 sm:p-12 text-center sm:text-left relative overflow-hidden">
                 <div class="max-w-2xl relative z-10">
-                    <span class="inline-block px-3 py-1 bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-semibold rounded-full mb-4">
+                    <span class="inline-block px-3 py-1 bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-semibold rounded-full mb-3">
                         Boas-vindas ao seu painel
                     </span>
-                    <h2 class="text-3xl sm:text-4xl font-extrabold text-white mb-4">
+                    <h2 class="text-2xl sm:text-4xl font-extrabold text-white mb-4">
                         Assuma o controle total do seu dinheiro de forma simples.
                     </h2>
-                    <p class="text-slate-400 text-sm sm:text-base mb-8 leading-relaxed">
+                    <p class="text-slate-400 text-xs sm:text-base mb-6 leading-relaxed">
                         Registe receitas, despesas e acompanhe os resultados em tempo real através de gráficos e análises detalhadas por mês e por ano.
                     </p>
-                    <div class="flex flex-wrap gap-4 justify-center sm:justify-start">
-                        <button onclick="navegarPara('entrada')" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 py-3 rounded-xl transition shadow-lg shadow-indigo-600/20 text-sm">
+                    <div class="flex flex-col sm:flex-row gap-3 justify-center sm:justify-start">
+                        <button onclick="navegarPara('entrada')" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 py-3 rounded-xl transition shadow-lg shadow-indigo-600/20 text-sm w-full sm:w-auto">
                             ➕ Cadastrar Movimentação
                         </button>
-                        <button onclick="navegarPara('resultado')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold px-6 py-3 rounded-xl transition text-sm">
+                        <button onclick="navegarPara('resultado')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold px-6 py-3 rounded-xl transition text-sm w-full sm:w-auto">
                             📊 Ver Painel Completo
                         </button>
                     </div>
@@ -73,44 +72,41 @@
             </div>
 
             <!-- CARDS INFORMATIVOS DA HOME -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
                     <div class="text-2xl mb-2">⚡</div>
-                    <h3 class="font-bold text-white mb-1">Rápido & Prático</h3>
+                    <h3 class="font-bold text-white mb-1 text-sm sm:text-base">Rápido & Prático</h3>
                     <p class="text-xs text-slate-400">Lance entradas e saídas definindo a categoria e o mês de referência de forma ágil.</p>
                 </div>
-                <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
+                <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
                     <div class="text-2xl mb-2">🏷️</div>
-                    <h3 class="font-bold text-white mb-1">Categorização Clara</h3>
+                    <h3 class="font-bold text-white mb-1 text-sm sm:text-base">Categorização Clara</h3>
                     <p class="text-xs text-slate-400">Separe os gastos entre Moradia, Alimentação, Saúde, Lazer e muito mais.</p>
                 </div>
-                <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
+                <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
                     <div class="text-2xl mb-2">📈</div>
-                    <h3 class="font-bold text-white mb-1">Visão Geral Completa</h3>
-                    <p class="text-xs text-slate-400">Analise todos os meses e anos em conjunto ou selecione um período específico para auditoria.</p>
+                    <h3 class="font-bold text-white mb-1 text-sm sm:text-base">Visão Geral Completa</h3>
+                    <p class="text-xs text-slate-400">Analise todos os meses e anos em conjunto ou selecione um período específico.</p>
                 </div>
             </div>
         </section>
 
         <!-- TELA 2: ENTRADA / REGISTRO DE TRANSAÇÃO -->
-        <section id="tela-entrada" class="hidden space-y-8">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <section id="tela-entrada" class="hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
                 <!-- FORMULÁRIO DE CADASTRO -->
-                <div class="lg:col-span-1 bg-slate-900 border border-slate-800 p-6 rounded-3xl h-fit">
-                    <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <div class="lg:col-span-1 bg-slate-900 border border-slate-800 p-5 sm:p-6 rounded-3xl h-fit">
+                    <h2 class="text-base sm:text-lg font-bold text-white mb-4 flex items-center gap-2">
                         <span>📝</span> Novo Lançamento
                     </h2>
 
                     <form id="form-transacao-direta" class="space-y-4">
-                        
-                        <!-- Mês de Referência para Facilitação -->
                         <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700">
                             <label class="block text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-1">
-                                📅 Mês de Referência do Lançamento
+                                📅 Mês de Referência
                             </label>
-                            <input type="month" id="registro-mes-referencia" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-sm text-white focus:outline-none focus:border-indigo-500">
-                            <p class="text-[11px] text-slate-400 mt-1">Garante a gravação no mês correto para evitar erros de data.</p>
+                            <input type="month" id="registro-mes-referencia" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
                         </div>
 
                         <div>
@@ -136,7 +132,7 @@
                         <div>
                             <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Categoria</label>
                             <select id="trans-categoria" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-indigo-500">
-                                <option value="" disabled selected>-- Selecione primeiro o Tipo --</option>
+                                <option value="" disabled selected>-- Selecione o Tipo primeiro --</option>
                             </select>
                         </div>
 
@@ -149,7 +145,7 @@
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Data exata</label>
+                                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Data</label>
                                 <input type="date" id="trans-data" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-indigo-500">
                             </div>
                         </div>
@@ -164,10 +160,12 @@
                     </form>
                 </div>
 
-                <!-- TABELA DE REGISTROS RECENTES -->
-                <div class="lg:col-span-2 bg-slate-900 border border-slate-800 p-6 rounded-3xl">
-                    <h2 class="text-lg font-bold text-white mb-4">📋 Registros Efetuados</h2>
-                    <div class="overflow-x-auto">
+                <!-- LISTA / TABELA DE REGISTROS -->
+                <div class="lg:col-span-2 bg-slate-900 border border-slate-800 p-5 sm:p-6 rounded-3xl">
+                    <h2 class="text-base sm:text-lg font-bold text-white mb-4">📋 Registros Efetuados</h2>
+                    
+                    <!-- TABELA DESKTOP -->
+                    <div class="hidden sm:block overflow-x-auto">
                         <table class="w-full text-left text-sm">
                             <thead>
                                 <tr class="text-xs font-semibold text-slate-400 border-b border-slate-800 uppercase">
@@ -180,42 +178,41 @@
                                     <th class="p-3 text-right">Ação</th>
                                 </tr>
                             </thead>
-                            <tbody id="tabela-registros-entrada" class="divide-y divide-slate-800/50">
-                                <!-- Preenchido dinamicamente via JS -->
-                            </tbody>
+                            <tbody id="tabela-registros-entrada" class="divide-y divide-slate-800/50"></tbody>
                         </table>
                     </div>
+
+                    <!-- CARDS MOBILE -->
+                    <div id="cards-registros-entrada-mobile" class="sm:hidden space-y-3"></div>
                 </div>
 
             </div>
         </section>
 
         <!-- TELA 3: RESULTADO FINAL / DASHBOARD -->
-        <section id="tela-resultado" class="hidden space-y-8">
+        <section id="tela-resultado" class="hidden space-y-6">
             
-            <!-- FILTROS DE ANÁLISE -->
-            <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl">
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <!-- FILTROS -->
+            <div class="bg-slate-900 border border-slate-800 p-4 sm:p-6 rounded-3xl">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Ano de Análise</label>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Ano</label>
                         <select id="filtro-ano" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
                             <option value="">Todos os Anos</option>
-                            <!-- Opções preenchidas via JS -->
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Mês de Análise</label>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Mês</label>
                         <select id="filtro-mes" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
                             <option value="">Todos os Meses</option>
-                            <!-- Opções preenchidas via JS -->
                         </select>
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Pesquisar</label>
-                        <input type="text" id="filtro-busca" placeholder="Buscar por nome ou categoria..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
+                        <input type="text" id="filtro-busca" placeholder="Buscar..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Filtrar por Tipo</label>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Tipo</label>
                         <select id="filtro-tipo" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
                             <option value="todos">Todos</option>
                             <option value="receita">Apenas Receitas</option>
@@ -225,46 +222,46 @@
                 </div>
             </div>
 
-            <!-- CARDS DE TOTALIZADORES -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
-                    <span class="text-xs font-bold text-slate-400 uppercase">Total Receitas</span>
-                    <div id="total-receitas" class="text-2xl font-extrabold text-emerald-400 mt-2">R$ 0,00</div>
+            <!-- CARDS TOTALIZADORES -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <div class="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl">
+                    <span class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase">Receitas</span>
+                    <div id="total-receitas" class="text-lg sm:text-2xl font-extrabold text-emerald-400 mt-1">R$ 0,00</div>
                 </div>
-                <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
-                    <span class="text-xs font-bold text-slate-400 uppercase">Total Despesas</span>
-                    <div id="total-despesas" class="text-2xl font-extrabold text-rose-400 mt-2">R$ 0,00</div>
+                <div class="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl">
+                    <span class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase">Despesas</span>
+                    <div id="total-despesas" class="text-lg sm:text-2xl font-extrabold text-rose-400 mt-1">R$ 0,00</div>
                 </div>
-                <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
-                    <span class="text-xs font-bold text-slate-400 uppercase">Saldo Liquido</span>
-                    <div id="saldo-total" class="text-2xl font-extrabold text-white mt-2">R$ 0,00</div>
+                <div class="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl">
+                    <span class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase">Saldo Líquido</span>
+                    <div id="saldo-total" class="text-lg sm:text-2xl font-extrabold text-white mt-1">R$ 0,00</div>
                 </div>
-                <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
-                    <span class="text-xs font-bold text-slate-400 uppercase">Comprometimento</span>
-                    <div id="dash-taxa" class="text-2xl font-extrabold text-indigo-400 mt-2">0%</div>
+                <div class="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl">
+                    <span class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase">Comprometimento</span>
+                    <div id="dash-taxa" class="text-lg sm:text-2xl font-extrabold text-indigo-400 mt-1">0%</div>
                 </div>
             </div>
 
             <!-- GRÁFICOS -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl">
-                    <h3 class="text-sm font-bold text-white mb-4">Receitas vs Despesas</h3>
-                    <div class="h-64">
+                <div class="bg-slate-900 border border-slate-800 p-4 sm:p-6 rounded-3xl">
+                    <h3 class="text-xs sm:text-sm font-bold text-white mb-4">Receitas vs Despesas</h3>
+                    <div class="relative h-56 sm:h-64 w-full">
                         <canvas id="chartEvolucao"></canvas>
                     </div>
                 </div>
-                <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl">
-                    <h3 class="text-sm font-bold text-white mb-4">Gastos por Categoria</h3>
-                    <div class="h-64">
+                <div class="bg-slate-900 border border-slate-800 p-4 sm:p-6 rounded-3xl">
+                    <h3 class="text-xs sm:text-sm font-bold text-white mb-4">Gastos por Categoria</h3>
+                    <div class="relative h-56 sm:h-64 w-full">
                         <canvas id="chartCategorias"></canvas>
                     </div>
                 </div>
             </div>
 
             <!-- RELATÓRIO DETALHADO -->
-            <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl">
-                <h3 class="text-lg font-bold text-white mb-4">📄 Histórico Filtrado</h3>
-                <div class="overflow-x-auto">
+            <div class="bg-slate-900 border border-slate-800 p-4 sm:p-6 rounded-3xl">
+                <h3 class="text-base sm:text-lg font-bold text-white mb-4">📄 Histórico Filtrado</h3>
+                <div class="hidden sm:block overflow-x-auto">
                     <table class="w-full text-left text-sm">
                         <thead>
                             <tr class="text-xs font-semibold text-slate-400 border-b border-slate-800 uppercase">
@@ -276,18 +273,16 @@
                                 <th class="p-3 text-right">Valor</th>
                             </tr>
                         </thead>
-                        <tbody id="lista-transacoes" class="divide-y divide-slate-800/50">
-                            <!-- Preenchido via JS -->
-                        </tbody>
+                        <tbody id="lista-transacoes" class="divide-y divide-slate-800/50"></tbody>
                     </table>
                 </div>
+                <div id="cards-historico-mobile" class="sm:hidden space-y-3"></div>
             </div>
 
         </section>
 
     </main>
 
-    <!-- JS EXTERNO DA APLICAÇÃO -->
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>

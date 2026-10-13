@@ -3,12 +3,10 @@ let categorias = [];
 let chartEvolucaoInstance = null;
 let chartCategoriasInstance = null;
 
-// Função auxiliar para formatar valores numéricos no padrão de moeda (R$ 1.234,56)
+// Formatação precisa de moeda
 function formatarMoeda(valor) {
-    return Number(valor).toLocaleString('pt-BR', {
-        style: 'currency',
-        currency: 'BRL'
-    });
+    const num = Math.round((Number(valor) + Number.EPSILON) * 100) / 100;
+    return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
 // Navegação entre Telas
@@ -21,8 +19,8 @@ async function navegarPara(tela) {
     const btnEntrada = document.getElementById('nav-tela-entrada');
     const btnResultado = document.getElementById('nav-tela-resultado');
 
-    const estiloAtivo = "text-xs font-semibold px-4 py-2 rounded-xl transition bg-indigo-600 text-white";
-    const estiloInativo = "text-xs font-semibold px-4 py-2 rounded-xl transition bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700";
+    const estiloAtivo = "px-3 py-2 rounded-xl transition bg-indigo-600 text-white font-semibold";
+    const estiloInativo = "px-3 py-2 rounded-xl transition bg-slate-800 text-slate-300 hover:bg-slate-700";
 
     btnInicial.className = estiloInativo;
     btnEntrada.className = estiloInativo;
@@ -69,14 +67,14 @@ document.getElementById('trans-tipo').addEventListener('change', function() {
     });
 });
 
-// Ajusta o campo de data quando o Mês de Referência muda na Tela de Registro
+// Sincronizar Data no Select de Mês de Referência
 document.getElementById('registro-mes-referencia').addEventListener('change', function() {
     if (this.value) {
         document.getElementById('trans-data').value = `${this.value}-01`;
     }
 });
 
-// Enviar Transação para o Backend Python
+// Guardar Transação
 document.getElementById('form-transacao-direta').addEventListener('submit', async function(e) {
     e.preventDefault();
 
@@ -84,7 +82,7 @@ document.getElementById('form-transacao-direta').addEventListener('submit', asyn
     const dataSelecionada = document.getElementById('trans-data').value;
 
     const novaTransacao = {
-        descricao: document.getElementById('trans-descricao').value,
+        descricao: document.getElementById('trans-descricao').value.trim(),
         valor: parseFloat(document.getElementById('trans-valor').value),
         tipo: document.getElementById('trans-tipo').value.toLowerCase(),
         categoria: document.getElementById('trans-categoria').value,
@@ -101,11 +99,9 @@ document.getElementById('form-transacao-direta').addEventListener('submit', asyn
 
         if (res.ok) {
             this.reset();
-            
-            // Mantém o mês e a data fixos conforme a escolha do utilizador
             document.getElementById('registro-mes-referencia').value = mesRefAtual;
             document.getElementById('trans-data').value = dataSelecionada;
-            document.getElementById('trans-categoria').innerHTML = '<option value="" disabled selected>-- Selecione primeiro o Tipo --</option>';
+            document.getElementById('trans-categoria').innerHTML = '<option value="" disabled selected>-- Selecione o Tipo primeiro --</option>';
             
             const badge = document.getElementById('badge-salvo');
             if (badge) {
@@ -124,14 +120,18 @@ document.getElementById('form-transacao-direta').addEventListener('submit', asyn
 async function carregarTransacoes() {
     try {
         const res = await fetch('/api/transacoes');
+        if (res.status === 401) {
+            window.location.reload();
+            return;
+        }
         transacoes = await res.json();
-        renderizarTabelaEntrada();
+        renderizarRegistrosEntrada();
     } catch (err) {
-        console.error("Erro ao procurar transações:", err);
+        console.error("Erro ao carregar transações:", err);
     }
 }
 
-// Popula os filtros de anos e meses dinamicamente com base nas transações cadastradas
+// Filtros de Data
 function atualizarOpcoesFiltroData() {
     const selectMes = document.getElementById('filtro-mes');
     const selectAno = document.getElementById('filtro-ano');
@@ -139,7 +139,6 @@ function atualizarOpcoesFiltroData() {
     const valorMesAtual = selectMes.value;
     const valorAnoAtual = selectAno ? selectAno.value : '';
     
-    // Extrai anos e meses únicos das transações
     const anosUnicos = [...new Set(transacoes.map(t => t.data.slice(0, 4)))].sort().reverse();
     const mesesUnicos = [...new Set(transacoes.map(t => t.data.slice(0, 7)))].sort().reverse();
 
@@ -166,36 +165,56 @@ function atualizarOpcoesFiltroData() {
     selectMes.value = valorMesAtual;
 }
 
-// Renderizar Tabela na Tela de Registro
-function renderizarTabelaEntrada() {
+// Renderização Híbrida (Desktop Tabela / Mobile Cards)
+function renderizarRegistrosEntrada() {
     const tbody = document.getElementById('tabela-registros-entrada');
-    if (!tbody) return;
-    tbody.innerHTML = '';
+    const containerMobile = document.getElementById('cards-registros-entrada-mobile');
+    
+    if (tbody) tbody.innerHTML = '';
+    if (containerMobile) containerMobile.innerHTML = '';
 
     transacoes.slice().reverse().forEach(t => {
-        const tr = document.createElement('tr');
         const eReceita = t.tipo.toLowerCase() === 'receita';
-        
-        tr.innerHTML = `
-            <td class="p-3 font-medium text-white">${t.descricao}</td>
-            <td class="p-3">
-                <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${eReceita ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">
-                    ${t.tipo}
-                </span>
-            </td>
-            <td class="p-3 text-slate-400">${t.categoria}</td>
-            <td class="p-3 text-slate-400">${t.data}</td>
-            <td class="p-3 text-slate-400">${t.status}</td>
-            <td class="p-3 text-right font-bold ${eReceita ? 'text-emerald-400' : 'text-rose-400'}">
-                ${eReceita ? '+' : '-'} ${formatarMoeda(t.valor)}
-            </td>
-            <td class="p-3 text-right">
-                <button onclick="excluirTransacao(${t.id})" class="text-rose-400 hover:text-rose-300 font-bold px-2 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-xs">
-                    🗑️
-                </button>
-            </td>
-        `;
-        tbody.appendChild(tr);
+        const corTexto = eReceita ? 'text-emerald-400' : 'text-rose-400';
+        const corBadge = eReceita ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20';
+
+        // Linha Tabela Desktop
+        if (tbody) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="p-3 font-medium text-white">${t.descricao}</td>
+                <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${corBadge}">${t.tipo}</span></td>
+                <td class="p-3 text-slate-400">${t.categoria}</td>
+                <td class="p-3 text-slate-400">${t.data}</td>
+                <td class="p-3 text-slate-400">${t.status}</td>
+                <td class="p-3 text-right font-bold ${corTexto}">${eReceita ? '+' : '-'} ${formatarMoeda(t.valor)}</td>
+                <td class="p-3 text-right">
+                    <button onclick="excluirTransacao(${t.id})" class="text-rose-400 hover:text-rose-300 font-bold px-2 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-xs">🗑️</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        }
+
+        // Card Mobile
+        if (containerMobile) {
+            const card = document.createElement('div');
+            card.className = "bg-slate-950 p-4 rounded-2xl border border-slate-800 flex justify-between items-center gap-3";
+            card.innerHTML = `
+                <div class="space-y-1">
+                    <div class="font-bold text-white text-sm">${t.descricao}</div>
+                    <div class="flex items-center gap-2 text-xs text-slate-400">
+                        <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase border ${corBadge}">${t.tipo}</span>
+                        <span>• ${t.categoria}</span>
+                        <span>• ${t.data}</span>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="font-extrabold text-sm ${corTexto}">${eReceita ? '+' : '-'} ${formatarMoeda(t.valor)}</div>
+                    <button onclick="excluirTransacao(${t.id})" class="text-rose-400 text-xs font-bold mt-1">Apagar 🗑️</button>
+                </div>
+            `;
+            containerMobile.appendChild(card);
+        }
     });
 }
 
@@ -213,7 +232,7 @@ async function excluirTransacao(id) {
     }
 }
 
-// Atualizar Dashboard e Relatórios
+// Dashboard e Cálculos Financeiros
 function atualizarDashboard() {
     const filtroAno = document.getElementById('filtro-ano') ? document.getElementById('filtro-ano').value : '';
     const filtroMes = document.getElementById('filtro-mes').value;
@@ -232,48 +251,64 @@ function atualizarDashboard() {
     let totalDespesas = 0;
 
     transacoesFiltradas.forEach(t => {
-        if (t.tipo.toLowerCase() === 'receita') totalReceitas += parseFloat(t.valor);
-        if (t.tipo.toLowerCase() === 'despesa') totalDespesas += parseFloat(t.valor);
+        const val = Math.round((Number(t.valor) + Number.EPSILON) * 100) / 100;
+        if (t.tipo.toLowerCase() === 'receita') totalReceitas += val;
+        if (t.tipo.toLowerCase() === 'despesa') totalDespesas += val;
     });
 
-    const saldoTotal = totalReceitas - totalDespesas;
+    totalReceitas = Math.round((totalReceitas + Number.EPSILON) * 100) / 100;
+    totalDespesas = Math.round((totalDespesas + Number.EPSILON) * 100) / 100;
+
+    const saldoTotal = Math.round(((totalReceitas - totalDespesas) + Number.EPSILON) * 100) / 100;
     const taxaComprometimento = totalReceitas > 0 ? ((totalDespesas / totalReceitas) * 100).toFixed(1) : 0;
 
-    // Aplicação da formatação legível nos cards
     document.getElementById('total-receitas').innerText = formatarMoeda(totalReceitas);
     document.getElementById('total-despesas').innerText = formatarMoeda(totalDespesas);
     
     const elSaldo = document.getElementById('saldo-total');
     elSaldo.innerText = formatarMoeda(saldoTotal);
-    elSaldo.className = `text-2xl font-extrabold mt-2 ${saldoTotal >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+    elSaldo.className = `text-lg sm:text-2xl font-extrabold mt-1 ${saldoTotal >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
 
     document.getElementById('dash-taxa').innerText = `${taxaComprometimento}%`;
 
+    // Renderizar Lista Filtrada
     const tbody = document.getElementById('lista-transacoes');
-    if (tbody) {
-        tbody.innerHTML = '';
+    const containerMobile = document.getElementById('cards-historico-mobile');
 
-        transacoesFiltradas.forEach(t => {
+    if (tbody) tbody.innerHTML = '';
+    if (containerMobile) containerMobile.innerHTML = '';
+
+    transacoesFiltradas.forEach(t => {
+        const eReceita = t.tipo.toLowerCase() === 'receita';
+        const corTexto = eReceita ? 'text-emerald-400' : 'text-rose-400';
+        const corBadge = eReceita ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20';
+
+        if (tbody) {
             const tr = document.createElement('tr');
-            const eReceita = t.tipo.toLowerCase() === 'receita';
-            
             tr.innerHTML = `
                 <td class="p-3 font-medium text-white">${t.descricao}</td>
-                <td class="p-3">
-                    <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${eReceita ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">
-                        ${t.tipo}
-                    </span>
-                </td>
+                <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${corBadge}">${t.tipo}</span></td>
                 <td class="p-3 text-slate-400">${t.categoria}</td>
                 <td class="p-3 text-slate-400">${t.data}</td>
                 <td class="p-3 text-slate-400">${t.status}</td>
-                <td class="p-3 text-right font-bold ${eReceita ? 'text-emerald-400' : 'text-rose-400'}">
-                    ${eReceita ? '+' : '-'} ${formatarMoeda(t.valor)}
-                </td>
+                <td class="p-3 text-right font-bold ${corTexto}">${eReceita ? '+' : '-'} ${formatarMoeda(t.valor)}</td>
             `;
             tbody.appendChild(tr);
-        });
-    }
+        }
+
+        if (containerMobile) {
+            const card = document.createElement('div');
+            card.className = "bg-slate-950 p-4 rounded-2xl border border-slate-800 flex justify-between items-center";
+            card.innerHTML = `
+                <div>
+                    <div class="font-bold text-white text-sm">${t.descricao}</div>
+                    <div class="text-xs text-slate-400">${t.categoria} • ${t.data}</div>
+                </div>
+                <div class="font-extrabold text-sm ${corTexto}">${eReceita ? '+' : '-'} ${formatarMoeda(t.valor)}</div>
+            `;
+            containerMobile.appendChild(card);
+        }
+    });
 
     renderizarGraficos(totalReceitas, totalDespesas, transacoesFiltradas);
 }
@@ -312,7 +347,8 @@ function renderizarGraficos(receitas, despesas, listaFiltrada) {
     if (elChartCategorias) {
         const categoriasMap = {};
         listaFiltrada.filter(t => t.tipo.toLowerCase() === 'despesa').forEach(t => {
-            categoriasMap[t.categoria] = (categoriasMap[t.categoria] || 0) + parseFloat(t.valor);
+            const val = Math.round((Number(t.valor) + Number.EPSILON) * 100) / 100;
+            categoriasMap[t.categoria] = (categoriasMap[t.categoria] || 0) + val;
         });
 
         const labelsCat = Object.keys(categoriasMap);
@@ -341,22 +377,18 @@ function renderizarGraficos(receitas, despesas, listaFiltrada) {
     }
 }
 
-// Event Listeners dos Filtros
+// Listeners dos Filtros
 const elFiltroAno = document.getElementById('filtro-ano');
-if (elFiltroAno) {
-    elFiltroAno.addEventListener('change', atualizarDashboard);
-}
+if (elFiltroAno) elFiltroAno.addEventListener('change', atualizarDashboard);
 document.getElementById('filtro-mes').addEventListener('change', atualizarDashboard);
 document.getElementById('filtro-busca').addEventListener('input', atualizarDashboard);
 document.getElementById('filtro-tipo').addEventListener('change', atualizarDashboard);
 
-// Função para encerrar a sessão e voltar para a tela de Login
+// Logout
 async function fazerLogout() {
     try {
         const res = await fetch('/api/logout', { method: 'POST' });
-        if (res.ok) {
-            window.location.reload();
-        }
+        if (res.ok) window.location.reload();
     } catch (err) {
         console.error("Erro ao encerrar sessão:", err);
     }

@@ -1,38 +1,59 @@
-import sqlite3
 import os
+import sqlite3
+from functools import wraps
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.secret_key = 'sua_chave_secreta_super_segura_aqui'
 
+# Configurações de Segurança de Sessão e Cookies
+app.secret_key = os.environ.get('SECRET_KEY', 'chave_secreta_padrao_desenvolvimento_123')
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    SESSION_COOKIE_SECURE=os.environ.get('RENDER') is not None
+)
+
+DATABASE_URL = os.environ.get('DATABASE_URL')
 DB_NAME = "database/financeiro.db"
 
 def get_db():
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row
-    return conn
+    # Se estiver no Render com PostgreSQL
+    if DATABASE_URL:
+        import psycopg2
+        import psycopg2.extras
+        url = DATABASE_URL.replace('postgres://', 'postgresql://')
+        conn = psycopg2.connect(url, cursor_factory=psycopg2.extras.DictCursor)
+        return conn
+    # Se estiver rodando localmente com SQLite (Windows)
+    else:
+        os.makedirs('database', exist_ok=True)
+        conn = sqlite3.connect(DB_NAME)
+        conn.row_factory = sqlite3.Row
+        return conn
 
 def init_db():
-    os.makedirs('database', exist_ok=True)
     conn = get_db()
     cursor = conn.cursor()
-    
+    is_postgres = DATABASE_URL is not None
+
+    pk_auto = "SERIAL PRIMARY KEY" if is_postgres else "INTEGER PRIMARY KEY AUTOINCREMENT"
+
     # Tabela de Utilizadores
-    cursor.execute('''
+    cursor.execute(f'''
         CREATE TABLE IF NOT EXISTS usuarios (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id {pk_auto},
             nome TEXT NOT NULL,
             email TEXT UNIQUE NOT NULL,
             senha_hash TEXT NOT NULL,
             is_admin INTEGER DEFAULT 0
         )
     ''')
-    
-    # Tabela de Transações (isolada por usuario_id)
-    cursor.execute('''
+
+    # Tabela de Transações
+    cursor.execute(f'''
         CREATE TABLE IF NOT EXISTS transacoes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id {pk_auto},
             usuario_id INTEGER NOT NULL,
             descricao TEXT NOT NULL,
             valor REAL NOT NULL,
@@ -40,32 +61,43 @@ def init_db():
             categoria TEXT NOT NULL,
             status TEXT NOT NULL,
             data TEXT NOT NULL,
-            FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
+            FOREIGN KEY (usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE
         )
     ''')
 
     # Tabela de Categorias
-    cursor.execute('''
+    cursor.execute(f'''
         CREATE TABLE IF NOT EXISTS categorias (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id {pk_auto},
             nome TEXT NOT NULL,
             tipo TEXT NOT NULL
         )
     ''')
 
     cursor.execute("SELECT COUNT(*) FROM categorias")
-    if cursor.fetchone()[0] == 0:
+    count = cursor.fetchone()[0]
+    if count == 0:
         cats = [
             ('Salário', 'receita'), ('Investimentos', 'receita'), ('Freelance', 'receita'), ('Presente', 'receita'),
             ('Alimentação', 'despesa'), ('Moradia', 'despesa'), ('Transporte', 'despesa'),
             ('Lazer', 'despesa'), ('Saúde', 'despesa'), ('Educação', 'despesa'), ('Outros', 'despesa')
         ]
-        cursor.executemany("INSERT INTO categorias (nome, tipo) VALUES (?, ?)", cats)
+        ph = "%s, %s" if is_postgres else "?, ?"
+        cursor.executemany(f"INSERT INTO categorias (nome, tipo) VALUES ({ph})", cats)
 
     conn.commit()
     conn.close()
 
 init_db()
+
+# --- DECORATOR DE AUTENTICAÇÃO ---
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'usuario_id' not in session:
+            return jsonify({'error': 'Sessão expirada. Faça login novamente.'}), 401
+        return f(*args, **kwargs)
+    return decorated_function
 
 # --- ROTAS DE AUTENTICAÇÃO ---
 
@@ -78,9 +110,9 @@ def index():
 @app.route('/api/cadastro', methods=['POST'])
 def cadastro():
     dados = request.get_json() or {}
-    nome = dados.get('nome')
+    nome = dados.get('nome', '').strip()
     email = dados.get('email', '').strip().lower()
-    senha = dados.get('senha')
+    senha = dados.get('senha', '').strip()
 
     if not nome or not email or not senha:
         return jsonify({'error': 'Preencha todos os campos.'}), 400
@@ -89,30 +121,39 @@ def cadastro():
 
     conn = get_db()
     cursor = conn.cursor()
+    is_postgres = DATABASE_URL is not None
+    ph = "%s, %s, %s" if is_postgres else "?, ?, ?"
+
     try:
-        cursor.execute("INSERT INTO usuarios (nome, email, senha_hash) VALUES (?, ?, ?)", (nome, email, senha_hash))
+        if is_postgres:
+            cursor.execute(f"INSERT INTO usuarios (nome, email, senha_hash) VALUES ({ph}) RETURNING id", (nome, email, senha_hash))
+            usuario_id = cursor.fetchone()[0]
+        else:
+            cursor.execute(f"INSERT INTO usuarios (nome, email, senha_hash) VALUES ({ph})", (nome, email, senha_hash))
+            usuario_id = cursor.lastrowid
+            
         conn.commit()
-        
-        usuario_id = cursor.lastrowid
+
         session['usuario_id'] = usuario_id
         session['usuario_nome'] = nome
         session['is_admin'] = 0
 
         conn.close()
         return jsonify({'message': 'Conta criada com sucesso!'}), 201
-    except sqlite3.IntegrityError:
+    except Exception:
         conn.close()
-        return jsonify({'error': 'Este e-mail já está cadastrado.'}), 400
+        return jsonify({'error': 'Este e-mail já está em uso.'}), 400
 
 @app.route('/api/login', methods=['POST'])
 def login():
     dados = request.get_json() or {}
     email = dados.get('email', '').strip().lower()
-    senha = dados.get('senha')
+    senha = dados.get('senha', '').strip()
 
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, nome, senha_hash, is_admin FROM usuarios WHERE email = ?", (email,))
+    ph = "%s" if DATABASE_URL else "?"
+    cursor.execute(f"SELECT id, nome, senha_hash, is_admin FROM usuarios WHERE email = {ph}", (email,))
     user = cursor.fetchone()
     conn.close()
 
@@ -129,37 +170,46 @@ def logout():
     session.clear()
     return jsonify({'message': 'Sessão encerrada.'})
 
-# --- ROTAS DE TRANSAÇÕES (ISOLADAS POR UTILIZADOR) ---
+# --- ROTAS DE TRANSAÇÕES PROTEGIDAS ---
 
 @app.route('/api/transacoes', methods=['GET'])
+@login_required
 def get_transacoes():
-    if 'usuario_id' not in session:
-        return jsonify({'error': 'Não autorizado'}), 401
-
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM transacoes WHERE usuario_id = ? ORDER BY data DESC", (session['usuario_id'],))
+    ph = "%s" if DATABASE_URL else "?"
+    cursor.execute(f"SELECT id, descricao, valor, tipo, categoria, status, data FROM transacoes WHERE usuario_id = {ph} ORDER BY data DESC", (session['usuario_id'],))
     rows = cursor.fetchall()
     conn.close()
 
-    resultado = [dict(row) for row in rows]
+    resultado = [
+        {
+            'id': row['id'],
+            'descricao': row['descricao'],
+            'valor': float(row['valor']),
+            'tipo': row['tipo'],
+            'categoria': row['categoria'],
+            'status': row['status'],
+            'data': row['data']
+        } for row in rows
+    ]
     return jsonify(resultado)
 
 @app.route('/api/transacoes', methods=['POST'])
+@login_required
 def add_transacao():
-    if 'usuario_id' not in session:
-        return jsonify({'error': 'Não autorizado'}), 401
-
     dados = request.get_json() or {}
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('''
+    ph = "%s, %s, %s, %s, %s, %s, %s" if DATABASE_URL else "?, ?, ?, ?, ?, ?, ?"
+    
+    cursor.execute(f'''
         INSERT INTO transacoes (usuario_id, descricao, valor, tipo, categoria, status, data)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES ({ph})
     ''', (
         session['usuario_id'],
         dados.get('descricao'),
-        float(dados.get('valor', 0)),
+        round(float(dados.get('valor', 0)), 2),
         str(dados.get('tipo', 'despesa')).lower(),
         dados.get('categoria', 'Outros'),
         dados.get('status', 'Pago/Recebido'),
@@ -170,13 +220,12 @@ def add_transacao():
     return jsonify({'message': 'Transação salva com sucesso!'}), 201
 
 @app.route('/api/transacoes/<int:transacao_id>', methods=['DELETE'])
+@login_required
 def delete_transacao(transacao_id):
-    if 'usuario_id' not in session:
-        return jsonify({'error': 'Não autorizado'}), 401
-
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM transacoes WHERE id = ? AND usuario_id = ?", (transacao_id, session['usuario_id']))
+    ph = "%s, %s" if DATABASE_URL else "?, ?"
+    cursor.execute(f"DELETE FROM transacoes WHERE id = {ph} AND usuario_id = {ph}", (transacao_id, session['usuario_id']))
     conn.commit()
     conn.close()
     return jsonify({'message': 'Transação removida.'})
@@ -185,10 +234,10 @@ def delete_transacao(transacao_id):
 def get_categorias():
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM categorias")
+    cursor.execute("SELECT id, nome, tipo FROM categorias")
     rows = cursor.fetchall()
     conn.close()
-    return jsonify([dict(row) for row in rows])
+    return jsonify([{'id': r['id'], 'nome': r['nome'], 'tipo': r['tipo']} for r in rows])
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
