@@ -1,7 +1,14 @@
-self.addEventListener('install', (e) => {
+self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-self.addEventListener('fetch', (e) => {
-  // Permite conexões com o servidor
+self.addEventListener('activate', (event) => {
+  event.waitUntil(clients.claim());
+});
+
+self.addEventListener('fetch', (event) => {
+  // Deixa o fluxo de rede correr normalmente
+  event.respondWith(fetch(event.request).catch(() => {
+    return caches.match(event.request);
+  }));
 });
