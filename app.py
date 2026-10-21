@@ -41,6 +41,7 @@ def init_db():
 
         pk_auto = "SERIAL PRIMARY KEY" if is_postgres else "INTEGER PRIMARY KEY AUTOINCREMENT"
 
+        # Tabela de Utilizadores
         cursor.execute(f'''
             CREATE TABLE IF NOT EXISTS usuarios (
                 id {pk_auto},
@@ -57,6 +58,7 @@ def init_db():
         except Exception:
             pass
 
+        # Tabela de Transações
         cursor.execute(f'''
             CREATE TABLE IF NOT EXISTS transacoes (
                 id {pk_auto},
@@ -70,6 +72,7 @@ def init_db():
             )
         ''')
 
+        # Tabela de Categorias
         cursor.execute(f'''
             CREATE TABLE IF NOT EXISTS categorias (
                 id {pk_auto},
@@ -84,31 +87,32 @@ def init_db():
         except Exception:
             pass
 
-        cursor.execute("SELECT COUNT(*) FROM categorias")
-        count = cursor.fetchone()[0]
-        if count == 0:
-            cats = [
-                ('Salário', 'receita', 'pessoal'), ('Investimentos', 'receita', 'pessoal'), 
-                ('Freelance', 'receita', 'pessoal'), ('Presente', 'receita', 'pessoal'),
-                ('Alimentação', 'despesa', 'pessoal'), ('Moradia', 'despesa', 'pessoal'), 
-                ('Transporte', 'despesa', 'pessoal'), ('Lazer', 'despesa', 'pessoal'), 
-                ('Saúde', 'despesa', 'pessoal'), ('Educação', 'despesa', 'pessoal'), ('Outros', 'despesa', 'pessoal'),
-                
-                ('Vendas de Produtos', 'receita', 'empresarial'), ('Prestação de Serviços', 'receita', 'empresarial'), 
-                ('Outras Receitas', 'receita', 'empresarial'),
-                ('Fornecedores / Estoque', 'despesa', 'empresarial'), ('Folha de Pagamento', 'despesa', 'empresarial'), 
-                ('Aluguel Comercial', 'despesa', 'empresarial'), ('Marketing e Vendas', 'despesa', 'empresarial'), 
-                ('Impostos e Taxas', 'despesa', 'empresarial'), ('Manutenção e Operações', 'despesa', 'empresarial'), 
-                ('Outros', 'despesa', 'empresarial')
-            ]
-            ph = "%s, %s, %s" if is_postgres else "?, ?, ?"
-            cursor.executemany(f"INSERT INTO categorias (nome, tipo, tipo_conta) VALUES ({ph})", cats)
+        # Recria as categorias padrão garantindo que os tipos de conta estão corretos
+        cursor.execute("DELETE FROM categorias;")
+        cats = [
+            # --- PESSOAL ---
+            ('Salário', 'receita', 'pessoal'), ('Investimentos', 'receita', 'pessoal'), 
+            ('Freelance', 'receita', 'pessoal'), ('Presente', 'receita', 'pessoal'),
+            ('Alimentação', 'despesa', 'pessoal'), ('Moradia', 'despesa', 'pessoal'), 
+            ('Transporte', 'despesa', 'pessoal'), ('Lazer', 'despesa', 'pessoal'), 
+            ('Saúde', 'despesa', 'pessoal'), ('Educação', 'despesa', 'pessoal'), ('Outros', 'despesa', 'pessoal'),
+            
+            # --- EMPRESARIAL ---
+            ('Vendas de Produtos', 'receita', 'empresarial'), ('Prestação de Serviços', 'receita', 'empresarial'), 
+            ('Outras Receitas', 'receita', 'empresarial'),
+            ('Fornecedores / Estoque', 'despesa', 'empresarial'), ('Folha de Pagamento', 'despesa', 'empresarial'), 
+            ('Aluguel Comercial', 'despesa', 'empresarial'), ('Marketing e Vendas', 'despesa', 'empresarial'), 
+            ('Impostos e Taxas', 'despesa', 'empresarial'), ('Manutenção e Operações', 'despesa', 'empresarial'), 
+            ('Outros', 'despesa', 'empresarial')
+        ]
+        ph = "%s, %s, %s" if is_postgres else "?, ?, ?"
+        cursor.executemany(f"INSERT INTO categorias (nome, tipo, tipo_conta) VALUES ({ph})", cats)
 
         conn.commit()
         conn.close()
-        print("Banco de dados sincronizado e inicializado com sucesso!")
+        print("Base de dados limpa e sincronizada com sucesso!")
     except Exception as e:
-        print(f"Erro ao inicializar banco: {e}")
+        print(f"Erro crítico ao inicializar base de dados: {e}")
 
 init_db()
 
