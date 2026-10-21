@@ -438,6 +438,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (elMesRef) elMesRef.value = anoMesAtual;
     if (elData) elData.value = hoje.toISOString().split('T')[0];
 
+    // ORDEM CRÍTICA: Carregar categorias PRIMEIRO para preencher os selects
     await carregarCategorias();
     await carregarTransacoes();
     navegarPara('inicial');
