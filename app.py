@@ -63,6 +63,24 @@ def init_db():
             )
         ''')
 
+        # SEGURANÇA EXTRA: Se a tabela já existia sem alguma coluna nova, adiciona-a agora
+        colunas_necessarias = [
+            ("usuario_id", "INTEGER"),
+            ("descricao", "TEXT"),
+            ("valor", "REAL"),
+            ("tipo", "TEXT"),
+            ("categoria", "TEXT"),
+            ("status", "TEXT"),
+            ("data", "TEXT")
+        ]
+
+        for col_nome, col_tipo in colunas_necessarias:
+            try:
+                cursor.execute(f"ALTER TABLE transacoes ADD COLUMN {col_nome} {col_tipo};")
+            except Exception:
+                # Se a coluna já existir, o banco vai ignorar o erro automaticamente
+                pass
+
         # Tabela de Categorias
         cursor.execute(f'''
             CREATE TABLE IF NOT EXISTS categorias (
@@ -85,11 +103,11 @@ def init_db():
 
         conn.commit()
         conn.close()
+        print("Base de dados inicializada com sucesso!")
     except Exception as e:
         print(f"Erro crítico ao inicializar base de dados: {e}")
 
 init_db()
-
 # --- DECORATOR DE AUTENTICAÇÃO ---
 def login_required(f):
     @wraps(f)
