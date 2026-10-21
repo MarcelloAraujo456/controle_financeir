@@ -38,16 +38,23 @@ def init_db():
 
         pk_auto = "SERIAL PRIMARY KEY" if is_postgres else "INTEGER PRIMARY KEY AUTOINCREMENT"
 
-        # Tabela de Utilizadores
+        # Tabela de Utilizadores com tipo de conta
         cursor.execute(f'''
             CREATE TABLE IF NOT EXISTS usuarios (
                 id {pk_auto},
                 nome TEXT NOT NULL,
                 email TEXT UNIQUE NOT NULL,
                 senha_hash TEXT NOT NULL,
+                tipo_conta TEXT DEFAULT 'pessoal',
                 is_admin INTEGER DEFAULT 0
             )
         ''')
+
+        # Migração automática para adicionar tipo_conta se a tabela já existir
+        try:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN tipo_conta TEXT DEFAULT 'pessoal';")
+        except Exception:
+            pass
 
         # Tabela de Transações
         cursor.execute(f'''
@@ -63,47 +70,46 @@ def init_db():
             )
         ''')
 
-        # SEGURANÇA EXTRA: Se a tabela já existia sem alguma coluna nova, adiciona-a agora
-        colunas_necessarias = [
-            ("usuario_id", "INTEGER"),
-            ("descricao", "TEXT"),
-            ("valor", "REAL"),
-            ("tipo", "TEXT"),
-            ("categoria", "TEXT"),
-            ("status", "TEXT"),
-            ("data", "TEXT")
-        ]
-
-        for col_nome, col_tipo in colunas_necessarias:
-            try:
-                cursor.execute(f"ALTER TABLE transacoes ADD COLUMN {col_nome} {col_tipo};")
-            except Exception:
-                # Se a coluna já existir, o banco vai ignorar o erro automaticamente
-                pass
-
-        # Tabela de Categorias
+        # Tabela de Categorias com distinção de tipo_conta
         cursor.execute(f'''
             CREATE TABLE IF NOT EXISTS categorias (
                 id {pk_auto},
                 nome TEXT NOT NULL,
-                tipo TEXT NOT NULL
+                tipo TEXT NOT NULL,
+                tipo_conta TEXT DEFAULT 'pessoal'
             )
         ''')
+
+        # Migração automática para adicionar tipo_conta na tabela categorias se necessário
+        try:
+            cursor.execute("ALTER TABLE categorias ADD COLUMN tipo_conta TEXT DEFAULT 'pessoal';")
+        except Exception:
+            pass
 
         cursor.execute("SELECT COUNT(*) FROM categorias")
         count = cursor.fetchone()[0]
         if count == 0:
             cats = [
-                ('Salário', 'receita'), ('Investimentos', 'receita'), ('Freelance', 'receita'), ('Presente', 'receita'),
-                ('Alimentação', 'despesa'), ('Moradia', 'despesa'), ('Transporte', 'despesa'),
-                ('Lazer', 'despesa'), ('Saúde', 'despesa'), ('Educação', 'despesa'), ('Outros', 'despesa')
+                # --- CATEGORIAS PESSOAIS ---
+                ('Salário', 'receita', 'pessoal'), ('Investimentos', 'receita', 'pessoal'), 
+                ('Freelance', 'receita', 'pessoal'), ('Presente', 'receita', 'pessoal'),
+                ('Alimentação', 'despesa', 'pessoal'), ('Moradia', 'despesa', 'pessoal'), 
+                ('Transporte', 'despesa', 'pessoal'), ('Lazer', 'despesa', 'pessoal'), 
+                ('Saúde', 'despesa', 'pessoal'), ('Educação', 'despesa', 'pessoal'), ('Outros', 'despesa', 'pessoal'),
+                
+                # --- CATEGORIAS EMPRESARIAIS ---
+                ('Vendas de Produtos', 'receita', 'empresarial'), ('Prestação de Serviços', 'receita', 'empresarial'), 
+                ('Outras Receitas', 'receita', 'empresarial'),
+                ('Fornecedores / Estoque', 'despesa', 'empresarial'), ('Folha de Pagamento', 'despesa', 'empresarial'), 
+                ('Aluguel Comercial', 'despesa', 'empresarial'), ('Marketing e Vendas', 'despesa', 'empresarial'), 
+                ('Impostos e Taxas', 'despesa', 'empresarial'), ('Manutenção e Operações', 'despesa', 'empresarial'), 
+                ('Outros', 'despesa', 'empresarial')
             ]
-            ph = "%s, %s" if is_postgres else "?, ?"
-            cursor.executemany(f"INSERT INTO categorias (nome, tipo) VALUES ({ph})", cats)
+            ph = "%s, %s, %s" if is_postgres else "?, ?, ?"
+            cursor.executemany(f"INSERT INTO categorias (nome, tipo, tipo_conta) VALUES ({ph})", cats)
 
         conn.commit()
         conn.close()
-        print("Base de dados inicializada com sucesso!")
     except Exception as e:
         print(f"Erro crítico ao inicializar base de dados: {e}")
 
@@ -135,35 +141,36 @@ def cadastro():
     nome = dados.get('nome', '').strip()
     email = dados.get('email', '').strip().lower()
     senha = dados.get('senha', '').strip()
+    tipo_conta = dados.get('tipo_conta', 'pessoal').strip().lower()
 
     if not nome or not email or not senha:
         return jsonify({'error': 'Preencha todos os campos.'}), 400
 
     senha_hash = generate_password_hash(senha)
 
-    conn = get_db()
-    cursor = conn.cursor()
-    is_postgres = DATABASE_URL is not None
-    ph = "%s, %s, %s" if is_postgres else "?, ?, ?"
-
     try:
+        conn = get_db()
+        cursor = conn.cursor()
+        is_postgres = DATABASE_URL is not None
+        ph = "%s, %s, %s, %s" if is_postgres else "?, ?, ?, ?"
+
         if is_postgres:
-            cursor.execute(f"INSERT INTO usuarios (nome, email, senha_hash) VALUES ({ph}) RETURNING id", (nome, email, senha_hash))
+            cursor.execute(f"INSERT INTO usuarios (nome, email, senha_hash, tipo_conta) VALUES ({ph}) RETURNING id", (nome, email, senha_hash, tipo_conta))
             usuario_id = cursor.fetchone()[0]
         else:
-            cursor.execute(f"INSERT INTO usuarios (nome, email, senha_hash) VALUES ({ph})", (nome, email, senha_hash))
+            cursor.execute(f"INSERT INTO usuarios (nome, email, senha_hash, tipo_conta) VALUES ({ph})", (nome, email, senha_hash, tipo_conta))
             usuario_id = cursor.lastrowid
             
         conn.commit()
+        conn.close()
 
         session['usuario_id'] = usuario_id
         session['usuario_nome'] = nome
+        session['tipo_conta'] = tipo_conta
         session['is_admin'] = 0
 
-        conn.close()
         return jsonify({'message': 'Conta criada com sucesso!'}), 201
     except Exception:
-        conn.close()
         return jsonify({'error': 'Este e-mail já está em uso.'}), 400
 
 @app.route('/api/login', methods=['POST'])
@@ -175,18 +182,18 @@ def login():
     conn = get_db()
     cursor = conn.cursor()
     ph = "%s" if DATABASE_URL else "?"
-    cursor.execute(f"SELECT id, nome, senha_hash, is_admin FROM usuarios WHERE email = {ph}", (email,))
+    cursor.execute(f"SELECT id, nome, senha_hash, tipo_conta, is_admin FROM usuarios WHERE email = {ph}", (email,))
     user = cursor.fetchone()
     conn.close()
 
     if user and check_password_hash(user['senha_hash'], senha):
         session['usuario_id'] = user['id']
         session['usuario_nome'] = user['nome']
+        session['tipo_conta'] = user['tipo_conta'] or 'pessoal'
         session['is_admin'] = user['is_admin']
         return jsonify({'message': 'Login realizado com sucesso!'})
     
     return jsonify({'error': 'E-mail ou senha incorretos.'}), 401
-
 @app.route('/api/logout', methods=['POST'])
 def logout():
     session.clear()
@@ -297,11 +304,16 @@ def delete_transacao(transacao_id):
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/categorias', methods=['GET'])
+@login_required
 def get_categorias():
     try:
+        tipo_conta_usuario = session.get('tipo_conta', 'pessoal')
         conn = get_db()
         cursor = conn.cursor()
-        cursor.execute("SELECT id, nome, tipo FROM categorias")
+        is_postgres = DATABASE_URL is not None
+        ph = "%s" if is_postgres else "?"
+
+        cursor.execute(f"SELECT id, nome, tipo FROM categorias WHERE tipo_conta = {ph}", (tipo_conta_usuario,))
         rows = cursor.fetchall()
         conn.close()
         return jsonify([{'id': r['id'], 'nome': r['nome'], 'tipo': r['tipo']} for r in rows])

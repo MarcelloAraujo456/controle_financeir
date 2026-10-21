@@ -1,17 +1,5 @@
 let transacoes = [];
-let categorias = [
-    { nome: 'Salário', tipo: 'receita' },
-    { nome: 'Investimentos', tipo: 'receita' },
-    { nome: 'Freelance', tipo: 'receita' },
-    { nome: 'Presente', tipo: 'receita' },
-    { nome: 'Alimentação', tipo: 'despesa' },
-    { nome: 'Moradia', tipo: 'despesa' },
-    { nome: 'Transporte', tipo: 'despesa' },
-    { nome: 'Lazer', tipo: 'despesa' },
-    { nome: 'Saúde', tipo: 'despesa' },
-    { nome: 'Educação', tipo: 'despesa' },
-    { nome: 'Outros', tipo: 'despesa' }
-];
+let categorias = []; // Carregado dinamicamente do servidor baseado na conta do utilizador
 let chartEvolucaoInstance = null;
 let chartCategoriasInstance = null;
 
@@ -53,7 +41,7 @@ async function navegarPara(tela) {
     }
 }
 
-// Carregar Categorias
+// Carregar Categorias da API (filtradas por tipo de conta no servidor)
 async function carregarCategorias() {
     try {
         const res = await fetch('/api/categorias');
@@ -64,7 +52,7 @@ async function carregarCategorias() {
             }
         }
     } catch (err) {
-        console.error("Erro ao carregar categorias do servidor, usando reserva local:", err);
+        console.error("Erro ao carregar categorias do servidor:", err);
     }
 }
 
@@ -80,10 +68,7 @@ if (elTransTipo) {
 
         const filtradas = categorias.filter(c => c.tipo.toLowerCase().trim() === tipoSelecionado);
 
-        // Se houver filtro gera as opções, caso contrário cai no fallback "Outros"
-        const listaParaExibir = filtradas.length > 0 ? filtradas : (tipoSelecionado === 'receita' ? [{nome: 'Salário'}, {nome: 'Outros'}] : [{nome: 'Alimentação'}, {nome: 'Moradia'}, {nome: 'Transporte'}, {nome: 'Outros'}]);
-
-        listaParaExibir.forEach(cat => {
+        filtradas.forEach(cat => {
             const option = document.createElement('option');
             option.value = cat.nome;
             option.textContent = cat.nome;
@@ -159,7 +144,6 @@ async function carregarTransacoes() {
             return;
         }
         const data = await res.json();
-        // Garante que se o servidor retornar um erro em JSON, não quebra a aplicação
         if (Array.isArray(data)) {
             transacoes = data;
         } else {
@@ -221,7 +205,6 @@ function renderizarRegistrosEntrada() {
         const corTexto = eReceita ? 'text-emerald-400' : 'text-rose-400';
         const corBadge = eReceita ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20';
 
-        // Linha Tabela Desktop
         if (tbody) {
             const tr = document.createElement('tr');
             tr.className = "border-b border-slate-800/50 hover:bg-slate-800/30";
@@ -239,7 +222,6 @@ function renderizarRegistrosEntrada() {
             tbody.appendChild(tr);
         }
 
-        // Card Mobile
         if (containerMobile) {
             const card = document.createElement('div');
             card.className = "bg-slate-950 p-4 rounded-2xl border border-slate-800 flex justify-between items-center gap-3";
@@ -327,7 +309,6 @@ function atualizarDashboard() {
     }
     if (elTaxa) elTaxa.innerText = `${taxaComprometimento}%`;
 
-    // Renderizar Lista Filtrada
     const tbody = document.getElementById('lista-transacoes');
     const containerMobile = document.getElementById('cards-historico-mobile');
 
@@ -468,7 +449,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (elMesRef) elMesRef.value = anoMesAtual;
     if (elData) elData.value = hoje.toISOString().split('T')[0];
 
-    // ORDEM CRÍTICA: Carregar categorias PRIMEIRO para preencher os selects
+    // ORDEM CRÍTICA: Carregar categorias PRIMEIRO para preencher os selects com base no tipo de conta
     await carregarCategorias();
     await carregarTransacoes();
     navegarPara('inicial');
