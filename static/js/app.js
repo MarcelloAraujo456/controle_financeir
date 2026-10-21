@@ -44,7 +44,8 @@ async function navegarPara(tela) {
         if (btnInicial) btnInicial.className = estiloAtivo;
     } else if (tela === 'entrada') {
         document.getElementById('tela-entrada').classList.remove('hidden');
-        if (btnEntrada) btnEntrada.className = estiloAtivo;
+        if (btnEntrada) btnEntrada.className = estiloInativo;
+        atualizarSelectCategorias(); // Garante categorias preenchidas ao entrar na tela
     } else if (tela === 'resultado') {
         document.getElementById('tela-resultado').classList.remove('hidden');
         if (btnResultado) btnResultado.className = estiloAtivo;
@@ -64,30 +65,37 @@ async function carregarCategorias() {
                 categorias = dados;
             }
         }
-    } catch (err) {
+    } cat (err) {
         console.warn("Usando categorias locais de reserva:", err);
     }
 }
 
-// Atualizar select de Categorias pelo Tipo selecionado
+// Preencher o select de Categorias baseado no Tipo selecionado
+function atualizarSelectCategorias() {
+    const elTipo = document.getElementById('trans-tipo');
+    const selectCategoria = document.getElementById('trans-categoria');
+    if (!elTipo || !selectCategoria) return;
+
+    const tipoSelecionado = elTipo.value ? elTipo.value.toLowerCase().trim() : '';
+    selectCategoria.innerHTML = '<option value="" disabled selected>-- Selecione a Categoria --</option>';
+
+    // Se nenhum tipo foi escolhido, mostra todas ou deixa limpo
+    const filtradas = tipoSelecionado 
+        ? categorias.filter(c => c.tipo.toLowerCase().trim() === tipoSelecionado)
+        : categorias;
+
+    filtradas.forEach(cat => {
+        const option = document.createElement('option');
+        option.value = cat.nome;
+        option.textContent = `${cat.nome} (${cat.tipo})`;
+        selectCategoria.appendChild(option);
+    });
+}
+
+// Evento ao mudar o Tipo
 const elTransTipo = document.getElementById('trans-tipo');
 if (elTransTipo) {
-    elTransTipo.addEventListener('change', function() {
-        const tipoSelecionado = this.value.toLowerCase().trim();
-        const selectCategoria = document.getElementById('trans-categoria');
-        if (!selectCategoria) return;
-
-        selectCategoria.innerHTML = '<option value="" disabled selected>-- Selecione a Categoria --</option>';
-
-        const filtradas = categorias.filter(c => c.tipo.toLowerCase().trim() === tipoSelecionado);
-
-        filtradas.forEach(cat => {
-            const option = document.createElement('option');
-            option.value = cat.nome;
-            option.textContent = cat.nome;
-            selectCategoria.appendChild(option);
-        });
-    });
+    elTransTipo.addEventListener('change', atualizarSelectCategorias);
 }
 
 // Sincronizar Data no Select de Mês de Referência
@@ -129,7 +137,7 @@ if (elFormTransacao) {
                 this.reset();
                 document.getElementById('registro-mes-referencia').value = mesRefAtual;
                 document.getElementById('trans-data').value = dataSelecionada;
-                document.getElementById('trans-categoria').innerHTML = '<option value="" disabled selected>-- Selecione o Tipo primeiro --</option>';
+                atualizarSelectCategorias();
                 
                 const badge = document.getElementById('badge-salvo');
                 if (badge) {
@@ -211,7 +219,6 @@ function renderizarRegistrosEntrada() {
         const corTexto = eReceita ? 'text-emerald-400' : 'text-rose-400';
         const corBadge = eReceita ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20';
 
-        // Linha Tabela Desktop
         if (tbody) {
             const tr = document.createElement('tr');
             tr.className = "border-b border-slate-800/50 hover:bg-slate-800/30";
@@ -229,7 +236,6 @@ function renderizarRegistrosEntrada() {
             tbody.appendChild(tr);
         }
 
-        // Card Mobile
         if (containerMobile) {
             const card = document.createElement('div');
             card.className = "bg-slate-950 p-4 rounded-2xl border border-slate-800 flex justify-between items-center gap-3";
@@ -316,46 +322,6 @@ function atualizarDashboard() {
         elSaldo.className = `text-lg sm:text-2xl font-extrabold mt-1 ${saldoTotal >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
     }
     if (elTaxa) elTaxa.innerText = `${taxaComprometimento}%`;
-
-    // Renderizar Lista Filtrada
-    const tbody = document.getElementById('lista-transacoes');
-    const containerMobile = document.getElementById('cards-historico-mobile');
-
-    if (tbody) tbody.innerHTML = '';
-    if (containerMobile) containerMobile.innerHTML = '';
-
-    transacoesFiltradas.forEach(t => {
-        const eReceita = t.tipo.toLowerCase() === 'receita';
-        const corTexto = eReceita ? 'text-emerald-400' : 'text-rose-400';
-        const corBadge = eReceita ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20';
-
-        if (tbody) {
-            const tr = document.createElement('tr');
-            tr.className = "border-b border-slate-800/50 hover:bg-slate-800/30";
-            tr.innerHTML = `
-                <td class="p-3 font-medium text-white">${t.descricao}</td>
-                <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${corBadge}">${t.tipo}</span></td>
-                <td class="p-3 text-slate-400">${t.categoria}</td>
-                <td class="p-3 text-slate-400">${t.data}</td>
-                <td class="p-3 text-slate-400">${t.status}</td>
-                <td class="p-3 text-right font-bold ${corTexto}">${eReceita ? '+' : '-'} ${formatarMoeda(t.valor)}</td>
-            `;
-            tbody.appendChild(tr);
-        }
-
-        if (containerMobile) {
-            const card = document.createElement('div');
-            card.className = "bg-slate-950 p-4 rounded-2xl border border-slate-800 flex justify-between items-center";
-            card.innerHTML = `
-                <div>
-                    <div class="font-bold text-white text-sm">${t.descricao}</div>
-                    <div class="text-xs text-slate-400">${t.categoria} • ${t.data}</div>
-                </div>
-                <div class="font-extrabold text-sm ${corTexto}">${eReceita ? '+' : '-'} ${formatarMoeda(t.valor)}</div>
-            `;
-            containerMobile.appendChild(card);
-        }
-    });
 
     renderizarGraficos(totalReceitas, totalDespesas, transacoesFiltradas);
 }
@@ -458,8 +424,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (elMesRef) elMesRef.value = anoMesAtual;
     if (elData) elData.value = hoje.toISOString().split('T')[0];
 
-    // ORDEM CRÍTICA: Carregar categorias PRIMEIRO para preencher os selects
     await carregarCategorias();
     await carregarTransacoes();
+    atualizarSelectCategorias();
     navegarPara('inicial');
 });
