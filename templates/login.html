@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Controle Financeiro</title>
+    <title>Login - FinanFlow</title>
     
+    <!-- Configuração PWA -->
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
     <meta name="theme-color" content="#0f172a">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon-192.png') }}">
@@ -17,20 +18,22 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center p-4">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center p-4 font-sans">
 
     <div class="bg-slate-900 p-8 rounded-3xl border border-slate-800 shadow-xl w-full max-w-md">
         
         <div class="text-center mb-6">
-            <div class="bg-indigo-600 text-white w-12 h-12 rounded-2xl flex items-center justify-center mx-auto text-2xl mb-2">
-                💰
+            <div class="bg-indigo-600 text-white w-12 h-12 rounded-2xl flex items-center justify-center mx-auto text-2xl mb-2 font-bold shadow-lg shadow-indigo-500/30">
+                F
             </div>
             <h1 class="text-2xl font-bold text-white" id="titulo-tela">Entrar na sua conta</h1>
             <p class="text-xs text-slate-400 mt-1" id="subtitulo-tela">Gerencie suas finanças de forma privativa e segura</p>
         </div>
 
+        <!-- MENSAGEM DE ERRO -->
         <div id="msg-erro" class="hidden mb-4 p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs rounded-xl font-medium text-center"></div>
 
+        <!-- FORMULÁRIO DE LOGIN E CADASTRO -->
         <form id="form-login" class="space-y-4">
             <div id="campo-nome" class="hidden">
                 <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Seu Nome</label>
@@ -52,11 +55,15 @@
             </button>
         </form>
 
-        <div class="mt-6 text-center">
-            <button id="btn-alternar" type="button" onclick="alternarModo()" class="text-xs text-indigo-400 font-semibold hover:underline">
+        <div class="mt-6 text-center space-y-2">
+            <button id="btn-alternar" type="button" onclick="alternarModo()" class="text-xs text-indigo-400 font-semibold hover:underline block mx-auto">
                 Não tem uma conta? Cadastre-se gratuitamente
             </button>
+            <a href="/home" class="text-xs text-slate-400 hover:text-slate-200 block mx-auto">
+                ← Voltar à página inicial
+            </a>
         </div>
+
     </div>
 
     <script>
