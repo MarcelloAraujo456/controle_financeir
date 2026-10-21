@@ -6,6 +6,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 
+# Configurações de Segurança de Sessão e Cookies
 app.secret_key = os.environ.get('SECRET_KEY', 'chave_secreta_padrao_desenvolvimento_123')
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
@@ -62,66 +63,7 @@ def init_db():
             )
         ''')
 
-        # Garante que as colunas existem caso a tabela já tenha sido criada antes sem elas
-        if is_postgres:
-            cursor.execute('ALTER TABLE transacoes ADD COLUMN IF NOT EXISTS usuario_id INTEGER;')
-            cursor.execute('ALTER TABLE transacoes ADD COLUMN IF NOT EXISTS descricao TEXT;')
-            cursor.execute('ALTER TABLE transacoes ADD COLUMN IF NOT EXISTS valor REAL;')
-            cursor.execute('ALTER TABLE transacoes ADD COLUMN IF NOT EXISTS tipo TEXT;')
-            cursor.execute('ALTER TABLE transacoes ADD COLUMN IF NOT EXISTS categoria TEXT;')
-            cursor.execute('ALTER TABLE transacoes ADD COLUMN IF NOT EXISTS status TEXT;')
-            cursor.execute('ALTER TABLE transacoes ADD COLUMN IF NOT EXISTS data TEXT;')
-
         # Tabela de Categorias
-        cursor.execute(f'''
-            CREATE TABLE IF NOT EXISTS categorias (
-                id {pk_auto},
-                nome TEXT NOT NULL,
-                tipo TEXT NOT NULL
-            )
-        ''')
-
-        cursor.execute("SELECT COUNT(*) FROM categorias")
-        count = cursor.fetchone()[0]
-        if count == 0:
-            cats = [
-                ('Salário', 'receita'), ('Investimentos', 'receita'), ('Freelance', 'receita'), ('Presente', 'receita'),
-                ('Alimentação', 'despesa'), ('Moradia', 'despesa'), ('Transporte', 'despesa'),
-                ('Lazer', 'despesa'), ('Saúde', 'despesa'), ('Educação', 'despesa'), ('Outros', 'despesa')
-            ]
-            ph = "%s, %s" if is_postgres else "?, ?"
-            cursor.executemany(f"INSERT INTO categorias (nome, tipo) VALUES ({ph})", cats)
-
-        conn.commit()
-        conn.close()
-    except Exception as e:
-        print(f"Erro crítico ao inicializar base de dados: {e}")
-
-        # Recria a tabela de transações para garantir que tem todas as colunas necessárias
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS transacoes (
-                id SERIAL PRIMARY KEY,
-                usuario_id INTEGER NOT NULL,
-                descricao TEXT NOT NULL,
-                valor REAL NOT NULL,
-                tipo TEXT NOT NULL,
-                categoria TEXT NOT NULL,
-                status TEXT NOT NULL,
-                data TEXT NOT NULL
-            )
-        ''' if is_postgres else '''
-            CREATE TABLE IF NOT EXISTS transacoes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                usuario_id INTEGER NOT NULL,
-                descricao TEXT NOT NULL,
-                valor REAL NOT NULL,
-                tipo TEXT NOT NULL,
-                categoria TEXT NOT NULL,
-                status TEXT NOT NULL,
-                data TEXT NOT NULL
-            )
-        ''')
-
         cursor.execute(f'''
             CREATE TABLE IF NOT EXISTS categorias (
                 id {pk_auto},
@@ -148,6 +90,7 @@ def init_db():
 
 init_db()
 
+# --- DECORATOR DE AUTENTICAÇÃO ---
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -155,6 +98,8 @@ def login_required(f):
             return jsonify({'error': 'Sessão expirada. Faça login novamente.'}), 401
         return f(*args, **kwargs)
     return decorated_function
+
+# --- ROTAS DE AUTENTICAÇÃO ---
 
 @app.route('/')
 def index():
@@ -177,6 +122,7 @@ def cadastro():
         return jsonify({'error': 'Preencha todos os campos.'}), 400
 
     senha_hash = generate_password_hash(senha)
+
     conn = get_db()
     cursor = conn.cursor()
     is_postgres = DATABASE_URL is not None
@@ -191,12 +137,14 @@ def cadastro():
             usuario_id = cursor.lastrowid
             
         conn.commit()
+
         session['usuario_id'] = usuario_id
         session['usuario_nome'] = nome
         session['is_admin'] = 0
+
         conn.close()
         return jsonify({'message': 'Conta criada com sucesso!'}), 201
-    except Exception as e:
+    except Exception:
         conn.close()
         return jsonify({'error': 'Este e-mail já está em uso.'}), 400
 
@@ -226,13 +174,32 @@ def logout():
     session.clear()
     return jsonify({'message': 'Sessão encerrada.'})
 
+# --- ROTAS DE TRANSAÇÕES PROTEGIDAS ---
+
 @app.route('/api/transacoes', methods=['GET'])
 @login_required
 def get_transacoes():
     try:
         conn = get_db()
         cursor = conn.cursor()
-        ph = "%s" if DATABASE_URL else "?"
+        is_postgres = DATABASE_URL is not None
+        ph = "%s" if is_postgres else "?"
+
+        # Garante que a tabela existe no momento da consulta
+        cursor.execute(f'''
+            CREATE TABLE IF NOT EXISTS transacoes (
+                id {"SERIAL PRIMARY KEY" if is_postgres else "INTEGER PRIMARY KEY AUTOINCREMENT"},
+                usuario_id INTEGER NOT NULL,
+                descricao TEXT NOT NULL,
+                valor REAL NOT NULL,
+                tipo TEXT NOT NULL,
+                categoria TEXT NOT NULL,
+                status TEXT NOT NULL,
+                data TEXT NOT NULL
+            )
+        ''')
+        conn.commit()
+
         cursor.execute(f"SELECT id, descricao, valor, tipo, categoria, status, data FROM transacoes WHERE usuario_id = {ph} ORDER BY data DESC", (session['usuario_id'],))
         rows = cursor.fetchall()
         conn.close()
@@ -260,8 +227,22 @@ def add_transacao():
         conn = get_db()
         cursor = conn.cursor()
         is_postgres = DATABASE_URL is not None
+
+        # Garante que a tabela existe no momento da inserção
+        cursor.execute(f'''
+            CREATE TABLE IF NOT EXISTS transacoes (
+                id {"SERIAL PRIMARY KEY" if is_postgres else "INTEGER PRIMARY KEY AUTOINCREMENT"},
+                usuario_id INTEGER NOT NULL,
+                descricao TEXT NOT NULL,
+                valor REAL NOT NULL,
+                tipo TEXT NOT NULL,
+                categoria TEXT NOT NULL,
+                status TEXT NOT NULL,
+                data TEXT NOT NULL
+            )
+        ''')
+
         ph = "%s, %s, %s, %s, %s, %s, %s" if is_postgres else "?, ?, ?, ?, ?, ?, ?"
-        
         cursor.execute(f"""
             INSERT INTO transacoes (usuario_id, descricao, valor, tipo, categoria, status, data)
             VALUES ({ph})
