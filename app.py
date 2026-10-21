@@ -7,7 +7,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 
-# Configurações de Segurança de Sessão e Cookies
 app.secret_key = os.environ.get('SECRET_KEY', 'chave_secreta_padrao_desenvolvimento_123')
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
@@ -42,7 +41,6 @@ def init_db():
 
         pk_auto = "SERIAL PRIMARY KEY" if is_postgres else "INTEGER PRIMARY KEY AUTOINCREMENT"
 
-        # Tabela de Usuarios
         cursor.execute(f'''
             CREATE TABLE IF NOT EXISTS usuarios (
                 id {pk_auto},
@@ -54,13 +52,11 @@ def init_db():
             )
         ''')
 
-        # Garantir coluna tipo_conta em tabelas já existentes
         try:
             cursor.execute("ALTER TABLE usuarios ADD COLUMN tipo_conta TEXT DEFAULT 'pessoal';")
         except Exception:
             pass
 
-        # Tabela de Transações
         cursor.execute(f'''
             CREATE TABLE IF NOT EXISTS transacoes (
                 id {pk_auto},
@@ -74,7 +70,6 @@ def init_db():
             )
         ''')
 
-        # Tabela de Categorias
         cursor.execute(f'''
             CREATE TABLE IF NOT EXISTS categorias (
                 id {pk_auto},
@@ -93,14 +88,12 @@ def init_db():
         count = cursor.fetchone()[0]
         if count == 0:
             cats = [
-                # PESSOAL
                 ('Salário', 'receita', 'pessoal'), ('Investimentos', 'receita', 'pessoal'), 
                 ('Freelance', 'receita', 'pessoal'), ('Presente', 'receita', 'pessoal'),
                 ('Alimentação', 'despesa', 'pessoal'), ('Moradia', 'despesa', 'pessoal'), 
                 ('Transporte', 'despesa', 'pessoal'), ('Lazer', 'despesa', 'pessoal'), 
                 ('Saúde', 'despesa', 'pessoal'), ('Educação', 'despesa', 'pessoal'), ('Outros', 'despesa', 'pessoal'),
                 
-                # EMPRESARIAL
                 ('Vendas de Produtos', 'receita', 'empresarial'), ('Prestação de Serviços', 'receita', 'empresarial'), 
                 ('Outras Receitas', 'receita', 'empresarial'),
                 ('Fornecedores / Estoque', 'despesa', 'empresarial'), ('Folha de Pagamento', 'despesa', 'empresarial'), 
@@ -193,7 +186,6 @@ def login():
         if user and check_password_hash(user['senha_hash'], senha):
             session['usuario_id'] = user['id']
             session['usuario_nome'] = user['nome']
-            # Tratamento de fallback para usuários criados antes da atualização
             session['tipo_conta'] = user['tipo_conta'] if 'tipo_conta' in user.keys() and user['tipo_conta'] else 'pessoal'
             session['is_admin'] = user['is_admin']
             return jsonify({'message': 'Login realizado com sucesso!'})
