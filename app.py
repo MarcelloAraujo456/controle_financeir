@@ -1,5 +1,6 @@
 import os
 import sqlite3
+import traceback
 from functools import wraps
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -22,6 +23,9 @@ def get_db():
         import psycopg2
         import psycopg2.extras
         url = DATABASE_URL.replace('postgres://', 'postgresql://')
+        if 'sslmode' not in url:
+            separator = '&' if '?' in url else '?'
+            url = f"{url}{separator}sslmode=require"
         conn = psycopg2.connect(url, cursor_factory=psycopg2.extras.DictCursor)
         return conn
     else:
@@ -38,7 +42,7 @@ def init_db():
 
         pk_auto = "SERIAL PRIMARY KEY" if is_postgres else "INTEGER PRIMARY KEY AUTOINCREMENT"
 
-        # Tabela de Utilizadores com tipo de conta
+        # Tabela de Usuarios
         cursor.execute(f'''
             CREATE TABLE IF NOT EXISTS usuarios (
                 id {pk_auto},
@@ -50,7 +54,7 @@ def init_db():
             )
         ''')
 
-        # Migração automática para adicionar tipo_conta se a tabela já existir
+        # Garantir coluna tipo_conta em tabelas já existentes
         try:
             cursor.execute("ALTER TABLE usuarios ADD COLUMN tipo_conta TEXT DEFAULT 'pessoal';")
         except Exception:
@@ -70,7 +74,7 @@ def init_db():
             )
         ''')
 
-        # Tabela de Categorias com distinção de tipo_conta
+        # Tabela de Categorias
         cursor.execute(f'''
             CREATE TABLE IF NOT EXISTS categorias (
                 id {pk_auto},
@@ -80,7 +84,6 @@ def init_db():
             )
         ''')
 
-        # Migração automática para adicionar tipo_conta na tabela categorias se necessário
         try:
             cursor.execute("ALTER TABLE categorias ADD COLUMN tipo_conta TEXT DEFAULT 'pessoal';")
         except Exception:
@@ -90,14 +93,14 @@ def init_db():
         count = cursor.fetchone()[0]
         if count == 0:
             cats = [
-                # --- CATEGORIAS PESSOAIS ---
+                # PESSOAL
                 ('Salário', 'receita', 'pessoal'), ('Investimentos', 'receita', 'pessoal'), 
                 ('Freelance', 'receita', 'pessoal'), ('Presente', 'receita', 'pessoal'),
                 ('Alimentação', 'despesa', 'pessoal'), ('Moradia', 'despesa', 'pessoal'), 
                 ('Transporte', 'despesa', 'pessoal'), ('Lazer', 'despesa', 'pessoal'), 
                 ('Saúde', 'despesa', 'pessoal'), ('Educação', 'despesa', 'pessoal'), ('Outros', 'despesa', 'pessoal'),
                 
-                # --- CATEGORIAS EMPRESARIAIS ---
+                # EMPRESARIAL
                 ('Vendas de Produtos', 'receita', 'empresarial'), ('Prestação de Serviços', 'receita', 'empresarial'), 
                 ('Outras Receitas', 'receita', 'empresarial'),
                 ('Fornecedores / Estoque', 'despesa', 'empresarial'), ('Folha de Pagamento', 'despesa', 'empresarial'), 
@@ -110,11 +113,12 @@ def init_db():
 
         conn.commit()
         conn.close()
+        print("Banco de dados sincronizado e inicializado com sucesso!")
     except Exception as e:
-        print(f"Erro crítico ao inicializar base de dados: {e}")
+        print(f"Erro ao inicializar banco: {e}")
 
 init_db()
-# --- DECORATOR DE AUTENTICAÇÃO ---
+
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -122,8 +126,6 @@ def login_required(f):
             return jsonify({'error': 'Sessão expirada. Faça login novamente.'}), 401
         return f(*args, **kwargs)
     return decorated_function
-
-# --- ROTAS DE AUTENTICAÇÃO ---
 
 @app.route('/')
 def index():
@@ -170,7 +172,8 @@ def cadastro():
         session['is_admin'] = 0
 
         return jsonify({'message': 'Conta criada com sucesso!'}), 201
-    except Exception:
+    except Exception as e:
+        traceback.print_exc()
         return jsonify({'error': 'Este e-mail já está em uso.'}), 400
 
 @app.route('/api/login', methods=['POST'])
@@ -179,27 +182,30 @@ def login():
     email = dados.get('email', '').strip().lower()
     senha = dados.get('senha', '').strip()
 
-    conn = get_db()
-    cursor = conn.cursor()
-    ph = "%s" if DATABASE_URL else "?"
-    cursor.execute(f"SELECT id, nome, senha_hash, tipo_conta, is_admin FROM usuarios WHERE email = {ph}", (email,))
-    user = cursor.fetchone()
-    conn.close()
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        ph = "%s" if DATABASE_URL else "?"
+        cursor.execute(f"SELECT id, nome, senha_hash, tipo_conta, is_admin FROM usuarios WHERE email = {ph}", (email,))
+        user = cursor.fetchone()
+        conn.close()
 
-    if user and check_password_hash(user['senha_hash'], senha):
-        session['usuario_id'] = user['id']
-        session['usuario_nome'] = user['nome']
-        session['tipo_conta'] = user['tipo_conta'] or 'pessoal'
-        session['is_admin'] = user['is_admin']
-        return jsonify({'message': 'Login realizado com sucesso!'})
+        if user and check_password_hash(user['senha_hash'], senha):
+            session['usuario_id'] = user['id']
+            session['usuario_nome'] = user['nome']
+            # Tratamento de fallback para usuários criados antes da atualização
+            session['tipo_conta'] = user['tipo_conta'] if 'tipo_conta' in user.keys() and user['tipo_conta'] else 'pessoal'
+            session['is_admin'] = user['is_admin']
+            return jsonify({'message': 'Login realizado com sucesso!'})
+    except Exception as e:
+        traceback.print_exc()
     
     return jsonify({'error': 'E-mail ou senha incorretos.'}), 401
+
 @app.route('/api/logout', methods=['POST'])
 def logout():
     session.clear()
     return jsonify({'message': 'Sessão encerrada.'})
-
-# --- ROTAS DE TRANSAÇÕES PROTEGIDAS ---
 
 @app.route('/api/transacoes', methods=['GET'])
 @login_required
@@ -209,21 +215,6 @@ def get_transacoes():
         cursor = conn.cursor()
         is_postgres = DATABASE_URL is not None
         ph = "%s" if is_postgres else "?"
-
-        # Garante que a tabela existe no momento da consulta
-        cursor.execute(f'''
-            CREATE TABLE IF NOT EXISTS transacoes (
-                id {"SERIAL PRIMARY KEY" if is_postgres else "INTEGER PRIMARY KEY AUTOINCREMENT"},
-                usuario_id INTEGER NOT NULL,
-                descricao TEXT NOT NULL,
-                valor REAL NOT NULL,
-                tipo TEXT NOT NULL,
-                categoria TEXT NOT NULL,
-                status TEXT NOT NULL,
-                data TEXT NOT NULL
-            )
-        ''')
-        conn.commit()
 
         cursor.execute(f"SELECT id, descricao, valor, tipo, categoria, status, data FROM transacoes WHERE usuario_id = {ph} ORDER BY data DESC", (session['usuario_id'],))
         rows = cursor.fetchall()
@@ -242,6 +233,7 @@ def get_transacoes():
         ]
         return jsonify(resultado)
     except Exception as e:
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/transacoes', methods=['POST'])
@@ -252,20 +244,6 @@ def add_transacao():
         conn = get_db()
         cursor = conn.cursor()
         is_postgres = DATABASE_URL is not None
-
-        # Garante que a tabela existe no momento da inserção
-        cursor.execute(f'''
-            CREATE TABLE IF NOT EXISTS transacoes (
-                id {"SERIAL PRIMARY KEY" if is_postgres else "INTEGER PRIMARY KEY AUTOINCREMENT"},
-                usuario_id INTEGER NOT NULL,
-                descricao TEXT NOT NULL,
-                valor REAL NOT NULL,
-                tipo TEXT NOT NULL,
-                categoria TEXT NOT NULL,
-                status TEXT NOT NULL,
-                data TEXT NOT NULL
-            )
-        ''')
 
         ph = "%s, %s, %s, %s, %s, %s, %s" if is_postgres else "?, ?, ?, ?, ?, ?, ?"
         cursor.execute(f"""
@@ -284,6 +262,7 @@ def add_transacao():
         conn.close()
         return jsonify({'message': 'Transação salva com sucesso!'}), 201
     except Exception as e:
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/transacoes/<int:transacao_id>', methods=['DELETE'])
@@ -318,6 +297,7 @@ def get_categorias():
         conn.close()
         return jsonify([{'id': r['id'], 'nome': r['nome'], 'tipo': r['tipo']} for r in rows])
     except Exception as e:
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
