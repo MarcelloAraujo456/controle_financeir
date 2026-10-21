@@ -37,6 +37,7 @@ def init_db():
 
         pk_auto = "SERIAL PRIMARY KEY" if is_postgres else "INTEGER PRIMARY KEY AUTOINCREMENT"
 
+        # Tabela de Utilizadores
         cursor.execute(f'''
             CREATE TABLE IF NOT EXISTS usuarios (
                 id {pk_auto},
@@ -46,6 +47,55 @@ def init_db():
                 is_admin INTEGER DEFAULT 0
             )
         ''')
+
+        # Tabela de Transações
+        cursor.execute(f'''
+            CREATE TABLE IF NOT EXISTS transacoes (
+                id {pk_auto},
+                usuario_id INTEGER NOT NULL,
+                descricao TEXT NOT NULL,
+                valor REAL NOT NULL,
+                tipo TEXT NOT NULL,
+                categoria TEXT NOT NULL,
+                status TEXT NOT NULL,
+                data TEXT NOT NULL
+            )
+        ''')
+
+        # Garante que as colunas existem caso a tabela já tenha sido criada antes sem elas
+        if is_postgres:
+            cursor.execute('ALTER TABLE transacoes ADD COLUMN IF NOT EXISTS usuario_id INTEGER;')
+            cursor.execute('ALTER TABLE transacoes ADD COLUMN IF NOT EXISTS descricao TEXT;')
+            cursor.execute('ALTER TABLE transacoes ADD COLUMN IF NOT EXISTS valor REAL;')
+            cursor.execute('ALTER TABLE transacoes ADD COLUMN IF NOT EXISTS tipo TEXT;')
+            cursor.execute('ALTER TABLE transacoes ADD COLUMN IF NOT EXISTS categoria TEXT;')
+            cursor.execute('ALTER TABLE transacoes ADD COLUMN IF NOT EXISTS status TEXT;')
+            cursor.execute('ALTER TABLE transacoes ADD COLUMN IF NOT EXISTS data TEXT;')
+
+        # Tabela de Categorias
+        cursor.execute(f'''
+            CREATE TABLE IF NOT EXISTS categorias (
+                id {pk_auto},
+                nome TEXT NOT NULL,
+                tipo TEXT NOT NULL
+            )
+        ''')
+
+        cursor.execute("SELECT COUNT(*) FROM categorias")
+        count = cursor.fetchone()[0]
+        if count == 0:
+            cats = [
+                ('Salário', 'receita'), ('Investimentos', 'receita'), ('Freelance', 'receita'), ('Presente', 'receita'),
+                ('Alimentação', 'despesa'), ('Moradia', 'despesa'), ('Transporte', 'despesa'),
+                ('Lazer', 'despesa'), ('Saúde', 'despesa'), ('Educação', 'despesa'), ('Outros', 'despesa')
+            ]
+            ph = "%s, %s" if is_postgres else "?, ?"
+            cursor.executemany(f"INSERT INTO categorias (nome, tipo) VALUES ({ph})", cats)
+
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Erro crítico ao inicializar base de dados: {e}")
 
         # Recria a tabela de transações para garantir que tem todas as colunas necessárias
         cursor.execute('''
