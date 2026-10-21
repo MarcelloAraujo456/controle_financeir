@@ -1,5 +1,18 @@
 let transacoes = [];
-let categorias = [];
+let categorias = [
+    { nome: 'Salário', tipo: 'receita' },
+    { nome: 'Investimentos', tipo: 'receita' },
+    { nome: 'Freelance', tipo: 'receita' },
+    { nome: 'Presente', tipo: 'receita' },
+    { nome: 'Alimentação', tipo: 'despesa' },
+    { nome: 'Moradia', tipo: 'despesa' },
+    { nome: 'Transporte', tipo: 'despesa' },
+    { nome: 'Lazer', tipo: 'despesa' },
+    { nome: 'Saúde', tipo: 'despesa' },
+    { nome: 'Educação', tipo: 'despesa' },
+    { nome: 'Outros', tipo: 'despesa' }
+];
+
 let chartEvolucaoInstance = null;
 let chartCategoriasInstance = null;
 
@@ -41,25 +54,32 @@ async function navegarPara(tela) {
     }
 }
 
-// Carregar Categorias
+// Carregar Categorias do Servidor (com fallback local garantido)
 async function carregarCategorias() {
     try {
         const res = await fetch('/api/categorias');
-        categorias = await res.json();
+        if (res.ok) {
+            const dados = await res.json();
+            if (dados && dados.length > 0) {
+                categorias = dados;
+            }
+        }
     } catch (err) {
-        console.error("Erro ao carregar categorias:", err);
+        console.warn("Usando categorias locais de reserva:", err);
     }
 }
 
-// Atualizar select de Categorias pelo Tipo
+// Atualizar select de Categorias pelo Tipo selecionado
 const elTransTipo = document.getElementById('trans-tipo');
 if (elTransTipo) {
     elTransTipo.addEventListener('change', function() {
-        const tipoSelecionado = this.value.toLowerCase();
+        const tipoSelecionado = this.value.toLowerCase().trim();
         const selectCategoria = document.getElementById('trans-categoria');
+        if (!selectCategoria) return;
+
         selectCategoria.innerHTML = '<option value="" disabled selected>-- Selecione a Categoria --</option>';
 
-        const filtradas = categorias.filter(c => c.tipo.toLowerCase() === tipoSelecionado);
+        const filtradas = categorias.filter(c => c.tipo.toLowerCase().trim() === tipoSelecionado);
 
         filtradas.forEach(cat => {
             const option = document.createElement('option');
