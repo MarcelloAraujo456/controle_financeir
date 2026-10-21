@@ -22,19 +22,19 @@ async function navegarPara(tela) {
     const estiloAtivo = "px-3 py-2 rounded-xl transition bg-indigo-600 text-white font-semibold";
     const estiloInativo = "px-3 py-2 rounded-xl transition bg-slate-800 text-slate-300 hover:bg-slate-700";
 
-    btnInicial.className = estiloInativo;
-    btnEntrada.className = estiloInativo;
-    btnResultado.className = estiloInativo;
+    if (btnInicial) btnInicial.className = estiloInativo;
+    if (btnEntrada) btnEntrada.className = estiloInativo;
+    if (btnResultado) btnResultado.className = estiloInativo;
 
     if (tela === 'inicial') {
         document.getElementById('tela-inicial').classList.remove('hidden');
-        btnInicial.className = estiloAtivo;
+        if (btnInicial) btnInicial.className = estiloAtivo;
     } else if (tela === 'entrada') {
         document.getElementById('tela-entrada').classList.remove('hidden');
-        btnEntrada.className = estiloAtivo;
+        if (btnEntrada) btnEntrada.className = estiloAtivo;
     } else if (tela === 'resultado') {
         document.getElementById('tela-resultado').classList.remove('hidden');
-        btnResultado.className = estiloAtivo;
+        if (btnResultado) btnResultado.className = estiloAtivo;
         await carregarTransacoes();
         atualizarOpcoesFiltroData();
         atualizarDashboard();
@@ -52,69 +52,81 @@ async function carregarCategorias() {
 }
 
 // Atualizar select de Categorias pelo Tipo
-document.getElementById('trans-tipo').addEventListener('change', function() {
-    const tipoSelecionado = this.value.toLowerCase();
-    const selectCategoria = document.getElementById('trans-categoria');
-    selectCategoria.innerHTML = '<option value="" disabled selected>-- Selecione a Categoria --</option>';
+const elTransTipo = document.getElementById('trans-tipo');
+if (elTransTipo) {
+    elTransTipo.addEventListener('change', function() {
+        const tipoSelecionado = this.value.toLowerCase();
+        const selectCategoria = document.getElementById('trans-categoria');
+        selectCategoria.innerHTML = '<option value="" disabled selected>-- Selecione a Categoria --</option>';
 
-    const filtradas = categorias.filter(c => c.tipo.toLowerCase() === tipoSelecionado);
+        const filtradas = categorias.filter(c => c.tipo.toLowerCase() === tipoSelecionado);
 
-    filtradas.forEach(cat => {
-        const option = document.createElement('option');
-        option.value = cat.nome;
-        option.textContent = cat.nome;
-        selectCategoria.appendChild(option);
+        filtradas.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat.nome;
+            option.textContent = cat.nome;
+            selectCategoria.appendChild(option);
+        });
     });
-});
+}
 
 // Sincronizar Data no Select de Mês de Referência
-document.getElementById('registro-mes-referencia').addEventListener('change', function() {
-    if (this.value) {
-        document.getElementById('trans-data').value = `${this.value}-01`;
-    }
-});
+const elMesRef = document.getElementById('registro-mes-referencia');
+if (elMesRef) {
+    elMesRef.addEventListener('change', function() {
+        if (this.value) {
+            document.getElementById('trans-data').value = `${this.value}-01`;
+        }
+    });
+}
 
 // Guardar Transação
-document.getElementById('form-transacao-direta').addEventListener('submit', async function(e) {
-    e.preventDefault();
+const elFormTransacao = document.getElementById('form-transacao-direta');
+if (elFormTransacao) {
+    elFormTransacao.addEventListener('submit', async function(e) {
+        e.preventDefault();
 
-    const mesRefAtual = document.getElementById('registro-mes-referencia').value;
-    const dataSelecionada = document.getElementById('trans-data').value;
+        const mesRefAtual = document.getElementById('registro-mes-referencia').value;
+        const dataSelecionada = document.getElementById('trans-data').value;
 
-    const novaTransacao = {
-        descricao: document.getElementById('trans-descricao').value.trim(),
-        valor: parseFloat(document.getElementById('trans-valor').value),
-        tipo: document.getElementById('trans-tipo').value.toLowerCase(),
-        categoria: document.getElementById('trans-categoria').value,
-        status: document.getElementById('trans-status').value,
-        data: dataSelecionada
-    };
+        const novaTransacao = {
+            descricao: document.getElementById('trans-descricao').value.trim(),
+            valor: parseFloat(document.getElementById('trans-valor').value),
+            tipo: document.getElementById('trans-tipo').value.toLowerCase(),
+            categoria: document.getElementById('trans-categoria').value,
+            status: document.getElementById('trans-status').value,
+            data: dataSelecionada
+        };
 
-    try {
-        const res = await fetch('/api/transacoes', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(novaTransacao)
-        });
+        try {
+            const res = await fetch('/api/transacoes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(novaTransacao)
+            });
 
-        if (res.ok) {
-            this.reset();
-            document.getElementById('registro-mes-referencia').value = mesRefAtual;
-            document.getElementById('trans-data').value = dataSelecionada;
-            document.getElementById('trans-categoria').innerHTML = '<option value="" disabled selected>-- Selecione o Tipo primeiro --</option>';
-            
-            const badge = document.getElementById('badge-salvo');
-            if (badge) {
-                badge.classList.remove('hidden');
-                setTimeout(() => badge.classList.add('hidden'), 3000);
+            if (res.ok) {
+                this.reset();
+                document.getElementById('registro-mes-referencia').value = mesRefAtual;
+                document.getElementById('trans-data').value = dataSelecionada;
+                document.getElementById('trans-categoria').innerHTML = '<option value="" disabled selected>-- Selecione o Tipo primeiro --</option>';
+                
+                const badge = document.getElementById('badge-salvo');
+                if (badge) {
+                    badge.classList.remove('hidden');
+                    setTimeout(() => badge.classList.add('hidden'), 3000);
+                }
+
+                await carregarTransacoes();
+            } else {
+                alert('Erro ao guardar a transação. Verifique os dados.');
             }
-
-            await carregarTransacoes();
+        } catch (err) {
+            console.error("Erro ao guardar transação:", err);
+            alert('Erro de conexão com o servidor.');
         }
-    } catch (err) {
-        console.error("Erro ao guardar transação:", err);
-    }
-});
+    });
+}
 
 // Carregar Transações
 async function carregarTransacoes() {
@@ -135,6 +147,7 @@ async function carregarTransacoes() {
 function atualizarOpcoesFiltroData() {
     const selectMes = document.getElementById('filtro-mes');
     const selectAno = document.getElementById('filtro-ano');
+    if (!selectMes) return;
     
     const valorMesAtual = selectMes.value;
     const valorAnoAtual = selectAno ? selectAno.value : '';
@@ -181,6 +194,7 @@ function renderizarRegistrosEntrada() {
         // Linha Tabela Desktop
         if (tbody) {
             const tr = document.createElement('tr');
+            tr.className = "border-b border-slate-800/50 hover:bg-slate-800/30";
             tr.innerHTML = `
                 <td class="p-3 font-medium text-white">${t.descricao}</td>
                 <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${corBadge}">${t.tipo}</span></td>
@@ -202,7 +216,7 @@ function renderizarRegistrosEntrada() {
             card.innerHTML = `
                 <div class="space-y-1">
                     <div class="font-bold text-white text-sm">${t.descricao}</div>
-                    <div class="flex items-center gap-2 text-xs text-slate-400">
+                    <div class="flex flex-wrap items-center gap-2 text-xs text-slate-400">
                         <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase border ${corBadge}">${t.tipo}</span>
                         <span>• ${t.categoria}</span>
                         <span>• ${t.data}</span>
@@ -220,6 +234,7 @@ function renderizarRegistrosEntrada() {
 
 // Excluir Transação
 async function excluirTransacao(id) {
+    if (!confirm('Deseja realmente apagar esta transação?')) return;
     try {
         const res = await fetch(`/api/transacoes/${id}`, { method: 'DELETE' });
         if (res.ok) {
@@ -234,10 +249,17 @@ async function excluirTransacao(id) {
 
 // Dashboard e Cálculos Financeiros
 function atualizarDashboard() {
-    const filtroAno = document.getElementById('filtro-ano') ? document.getElementById('filtro-ano').value : '';
-    const filtroMes = document.getElementById('filtro-mes').value;
-    const filtroBusca = document.getElementById('filtro-busca').value.toLowerCase();
-    const filtroTipo = document.getElementById('filtro-tipo').value.toLowerCase();
+    const elFiltroAno = document.getElementById('filtro-ano');
+    const elFiltroMes = document.getElementById('filtro-mes');
+    const elFiltroBusca = document.getElementById('filtro-busca');
+    const elFiltroTipo = document.getElementById('filtro-tipo');
+
+    if (!elFiltroMes) return;
+
+    const filtroAno = elFiltroAno ? elFiltroAno.value : '';
+    const filtroMes = elFiltroMes.value;
+    const filtroBusca = elFiltroBusca ? elFiltroBusca.value.toLowerCase() : '';
+    const filtroTipo = elFiltroTipo ? elFiltroTipo.value.toLowerCase() : 'todos';
 
     let transacoesFiltradas = transacoes.filter(t => {
         const bateAno = filtroAno ? t.data.startsWith(filtroAno) : true;
@@ -262,14 +284,18 @@ function atualizarDashboard() {
     const saldoTotal = Math.round(((totalReceitas - totalDespesas) + Number.EPSILON) * 100) / 100;
     const taxaComprometimento = totalReceitas > 0 ? ((totalDespesas / totalReceitas) * 100).toFixed(1) : 0;
 
-    document.getElementById('total-receitas').innerText = formatarMoeda(totalReceitas);
-    document.getElementById('total-despesas').innerText = formatarMoeda(totalDespesas);
-    
+    const elRec = document.getElementById('total-receitas');
+    const elDesp = document.getElementById('total-despesas');
     const elSaldo = document.getElementById('saldo-total');
-    elSaldo.innerText = formatarMoeda(saldoTotal);
-    elSaldo.className = `text-lg sm:text-2xl font-extrabold mt-1 ${saldoTotal >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+    const elTaxa = document.getElementById('dash-taxa');
 
-    document.getElementById('dash-taxa').innerText = `${taxaComprometimento}%`;
+    if (elRec) elRec.innerText = formatarMoeda(totalReceitas);
+    if (elDesp) elDesp.innerText = formatarMoeda(totalDespesas);
+    if (elSaldo) {
+        elSaldo.innerText = formatarMoeda(saldoTotal);
+        elSaldo.className = `text-lg sm:text-2xl font-extrabold mt-1 ${saldoTotal >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+    }
+    if (elTaxa) elTaxa.innerText = `${taxaComprometimento}%`;
 
     // Renderizar Lista Filtrada
     const tbody = document.getElementById('lista-transacoes');
@@ -285,6 +311,7 @@ function atualizarDashboard() {
 
         if (tbody) {
             const tr = document.createElement('tr');
+            tr.className = "border-b border-slate-800/50 hover:bg-slate-800/30";
             tr.innerHTML = `
                 <td class="p-3 font-medium text-white">${t.descricao}</td>
                 <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${corBadge}">${t.tipo}</span></td>
@@ -380,9 +407,15 @@ function renderizarGraficos(receitas, despesas, listaFiltrada) {
 // Listeners dos Filtros
 const elFiltroAno = document.getElementById('filtro-ano');
 if (elFiltroAno) elFiltroAno.addEventListener('change', atualizarDashboard);
-document.getElementById('filtro-mes').addEventListener('change', atualizarDashboard);
-document.getElementById('filtro-busca').addEventListener('input', atualizarDashboard);
-document.getElementById('filtro-tipo').addEventListener('change', atualizarDashboard);
+
+const elFiltroMes = document.getElementById('filtro-mes');
+if (elFiltroMes) elFiltroMes.addEventListener('change', atualizarDashboard);
+
+const elFiltroBusca = document.getElementById('filtro-busca');
+if (elFiltroBusca) elFiltroBusca.addEventListener('input', atualizarDashboard);
+
+const elFiltroTipo = document.getElementById('filtro-tipo');
+if (elFiltroTipo) elFiltroTipo.addEventListener('change', atualizarDashboard);
 
 // Logout
 async function fazerLogout() {
@@ -399,8 +432,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const hoje = new Date();
     const anoMesAtual = hoje.toISOString().slice(0, 7);
     
-    document.getElementById('registro-mes-referencia').value = anoMesAtual;
-    document.getElementById('trans-data').value = hoje.toISOString().split('T')[0];
+    const elMesRef = document.getElementById('registro-mes-referencia');
+    const elData = document.getElementById('trans-data');
+
+    if (elMesRef) elMesRef.value = anoMesAtual;
+    if (elData) elData.value = hoje.toISOString().split('T')[0];
 
     await carregarCategorias();
     await carregarTransacoes();

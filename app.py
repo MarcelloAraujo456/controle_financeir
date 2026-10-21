@@ -18,14 +18,12 @@ DATABASE_URL = os.environ.get('DATABASE_URL')
 DB_NAME = "database/financeiro.db"
 
 def get_db():
-    # Se estiver no Render com PostgreSQL
     if DATABASE_URL:
         import psycopg2
         import psycopg2.extras
         url = DATABASE_URL.replace('postgres://', 'postgresql://')
         conn = psycopg2.connect(url, cursor_factory=psycopg2.extras.DictCursor)
         return conn
-    # Se estiver rodando localmente com SQLite (Windows)
     else:
         os.makedirs('database', exist_ok=True)
         conn = sqlite3.connect(DB_NAME)
@@ -39,7 +37,6 @@ def init_db():
 
     pk_auto = "SERIAL PRIMARY KEY" if is_postgres else "INTEGER PRIMARY KEY AUTOINCREMENT"
 
-    # Tabela de Utilizadores
     cursor.execute(f'''
         CREATE TABLE IF NOT EXISTS usuarios (
             id {pk_auto},
@@ -50,7 +47,6 @@ def init_db():
         )
     ''')
 
-    # Tabela de Transações
     cursor.execute(f'''
         CREATE TABLE IF NOT EXISTS transacoes (
             id {pk_auto},
@@ -65,7 +61,6 @@ def init_db():
         )
     ''')
 
-    # Tabela de Categorias
     cursor.execute(f'''
         CREATE TABLE IF NOT EXISTS categorias (
             id {pk_auto},
@@ -90,7 +85,6 @@ def init_db():
 
 init_db()
 
-# --- DECORATOR DE AUTENTICAÇÃO ---
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -98,8 +92,6 @@ def login_required(f):
             return jsonify({'error': 'Sessão expirada. Faça login novamente.'}), 401
         return f(*args, **kwargs)
     return decorated_function
-
-# --- ROTAS DE AUTENTICAÇÃO ---
 
 @app.route('/')
 def index():
@@ -118,7 +110,6 @@ def cadastro():
         return jsonify({'error': 'Preencha todos os campos.'}), 400
 
     senha_hash = generate_password_hash(senha)
-
     conn = get_db()
     cursor = conn.cursor()
     is_postgres = DATABASE_URL is not None
@@ -133,11 +124,9 @@ def cadastro():
             usuario_id = cursor.lastrowid
             
         conn.commit()
-
         session['usuario_id'] = usuario_id
         session['usuario_nome'] = nome
         session['is_admin'] = 0
-
         conn.close()
         return jsonify({'message': 'Conta criada com sucesso!'}), 201
     except Exception:
@@ -170,8 +159,6 @@ def logout():
     session.clear()
     return jsonify({'message': 'Sessão encerrada.'})
 
-# --- ROTAS DE TRANSAÇÕES PROTEGIDAS ---
-
 @app.route('/api/transacoes', methods=['GET'])
 @login_required
 def get_transacoes():
@@ -201,12 +188,13 @@ def add_transacao():
     dados = request.get_json() or {}
     conn = get_db()
     cursor = conn.cursor()
-    ph = "%s, %s, %s, %s, %s, %s, %s" if DATABASE_URL else "?, ?, ?, ?, ?, ?, ?"
+    is_postgres = DATABASE_URL is not None
+    ph = "%s, %s, %s, %s, %s, %s, %s" if is_postgres else "?, ?, ?, ?, ?, ?, ?"
     
-    cursor.execute(f'''
+    cursor.execute(f"""
         INSERT INTO transacoes (usuario_id, descricao, valor, tipo, categoria, status, data)
         VALUES ({ph})
-    ''', (
+    """, (
         session['usuario_id'],
         dados.get('descricao'),
         round(float(dados.get('valor', 0)), 2),
@@ -224,8 +212,11 @@ def add_transacao():
 def delete_transacao(transacao_id):
     conn = get_db()
     cursor = conn.cursor()
-    ph = "%s, %s" if DATABASE_URL else "?, ?"
-    cursor.execute(f"DELETE FROM transacoes WHERE id = {ph} AND usuario_id = {ph}", (transacao_id, session['usuario_id']))
+    is_postgres = DATABASE_URL is not None
+    if is_postgres:
+        cursor.execute("DELETE FROM transacoes WHERE id = %s AND usuario_id = %s", (transacao_id, session['usuario_id']))
+    else:
+        cursor.execute("DELETE FROM transacoes WHERE id = ? AND usuario_id = ?", (transacao_id, session['usuario_id']))
     conn.commit()
     conn.close()
     return jsonify({'message': 'Transação removida.'})

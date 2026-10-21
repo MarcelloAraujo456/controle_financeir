@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Controle Financeiro</title>
     
-    <!-- Configuração PWA -->
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
     <meta name="theme-color" content="#0f172a">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon-192.png') }}">
@@ -30,10 +29,8 @@
             <p class="text-xs text-slate-400 mt-1" id="subtitulo-tela">Gerencie suas finanças de forma privativa e segura</p>
         </div>
 
-        <!-- MENSAGEM DE ERRO -->
         <div id="msg-erro" class="hidden mb-4 p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs rounded-xl font-medium text-center"></div>
 
-        <!-- FORMULÁRIO DE LOGIN E CADASTRO -->
         <form id="form-login" class="space-y-4">
             <div id="campo-nome" class="hidden">
                 <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Seu Nome</label>
@@ -56,11 +53,10 @@
         </form>
 
         <div class="mt-6 text-center">
-            <button id="btn-alternar" onclick="alternarModo()" class="text-xs text-indigo-400 font-semibold hover:underline">
+            <button id="btn-alternar" type="button" onclick="alternarModo()" class="text-xs text-indigo-400 font-semibold hover:underline">
                 Não tem uma conta? Cadastre-se gratuitamente
             </button>
         </div>
-
     </div>
 
     <script>

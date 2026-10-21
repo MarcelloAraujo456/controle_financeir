@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Controle Financeiro</title>
     
-    <!-- Configuração PWA -->
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
     <meta name="theme-color" content="#0f172a">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon-192.png') }}">
@@ -21,13 +20,10 @@
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen font-sans pb-10">
 
-    <!-- BARRA DE NAVEGAÇÃO SUPERIOR -->
     <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-50">
         <div class="max-w-6xl mx-auto px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
             <div class="flex items-center gap-3">
-                <div class="bg-indigo-600 p-2 rounded-xl text-white">
-                    💰
-                </div>
+                <div class="bg-indigo-600 p-2 rounded-xl text-white">💰</div>
                 <div>
                     <h1 class="text-base sm:text-lg font-bold text-white leading-tight">Controle Financeiro</h1>
                     <p class="text-[11px] text-slate-400">Gestão Pessoal & Inteligente</p>
@@ -36,22 +32,14 @@
 
             <div class="flex flex-wrap items-center justify-center sm:justify-end gap-2 w-full sm:w-auto">
                 <nav class="flex items-center gap-1 bg-slate-950 p-1 rounded-2xl border border-slate-800 text-xs">
-                    <button id="nav-tela-inicial" onclick="navegarPara('inicial')" class="px-3 py-2 rounded-xl transition bg-indigo-600 text-white font-semibold">
-                        🏠 Início
-                    </button>
-                    <button id="nav-tela-entrada" onclick="navegarPara('entrada')" class="px-3 py-2 rounded-xl transition bg-slate-800 text-slate-300 hover:bg-slate-700">
-                        ✍️ Novo Registro
-                    </button>
-                    <button id="nav-tela-resultado" onclick="navegarPara('resultado')" class="px-3 py-2 rounded-xl transition bg-slate-800 text-slate-300 hover:bg-slate-700">
-                        📊 Painel
-                    </button>
+                    <button id="nav-tela-inicial" onclick="navegarPara('inicial')" class="px-3 py-2 rounded-xl transition bg-indigo-600 text-white font-semibold">🏠 Início</button>
+                    <button id="nav-tela-entrada" onclick="navegarPara('entrada')" class="px-3 py-2 rounded-xl transition bg-slate-800 text-slate-300 hover:bg-slate-700">✍️ Novo Registro</button>
+                    <button id="nav-tela-resultado" onclick="navegarPara('resultado')" class="px-3 py-2 rounded-xl transition bg-slate-800 text-slate-300 hover:bg-slate-700">📊 Painel</button>
                 </nav>
 
                 <div class="flex items-center gap-2 border-l border-slate-800 pl-2">
                     <span class="text-xs font-bold text-slate-300 max-w-[120px] truncate">👤 {{ usuario_nome }}</span>
-                    <button onclick="fazerLogout()" class="text-xs font-bold px-3 py-2 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition">
-                        🚪 Sair
-                    </button>
+                    <button onclick="fazerLogout()" class="text-xs font-bold px-3 py-2 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition">🚪 Sair</button>
                 </div>
             </div>
         </div>
@@ -59,65 +47,36 @@
 
     <main class="max-w-6xl mx-auto px-4 mt-6">
 
-        <!-- TELA 1: INICIAL / BOAS-VINDAS -->
+        <!-- TELA 1: INICIAL -->
         <section id="tela-inicial" class="space-y-6">
             <div class="bg-gradient-to-r from-indigo-900/40 via-slate-900 to-slate-900 border border-indigo-500/20 rounded-3xl p-6 sm:p-12 text-center sm:text-left relative overflow-hidden">
                 <div class="max-w-2xl relative z-10">
-                    <span class="inline-block px-3 py-1 bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-semibold rounded-full mb-3">
-                        Boas-vindas ao seu painel
-                    </span>
-                    <h2 class="text-2xl sm:text-4xl font-extrabold text-white mb-4">
-                        Assuma o controle total do seu dinheiro de forma simples.
-                    </h2>
-                    <p class="text-slate-400 text-xs sm:text-base mb-6 leading-relaxed">
-                        Registe receitas, despesas e acompanhe os resultados em tempo real através de gráficos e análises detalhadas por mês e por ano.
-                    </p>
+                    <span class="inline-block px-3 py-1 bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-semibold rounded-full mb-3">Boas-vindas ao seu painel</span>
+                    <h2 class="text-2xl sm:text-4xl font-extrabold text-white mb-4">Assuma o controle total do seu dinheiro de forma simples.</h2>
+                    <p class="text-slate-400 text-xs sm:text-base mb-6 leading-relaxed">Registe receitas, despesas e acompanhe os resultados em tempo real através de gráficos e análises detalhadas por mês e por ano.</p>
                     <div class="flex flex-col sm:flex-row gap-3 justify-center sm:justify-start">
-                        <button onclick="navegarPara('entrada')" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 py-3 rounded-xl transition shadow-lg shadow-indigo-600/20 text-sm w-full sm:w-auto">
-                            ➕ Cadastrar Movimentação
-                        </button>
-                        <button onclick="navegarPara('resultado')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold px-6 py-3 rounded-xl transition text-sm w-full sm:w-auto">
-                            📊 Ver Painel Completo
-                        </button>
+                        <button onclick="navegarPara('entrada')" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 py-3 rounded-xl transition shadow-lg shadow-indigo-600/20 text-sm">➕ Cadastrar Movimentação</button>
+                        <button onclick="navegarPara('resultado')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold px-6 py-3 rounded-xl transition text-sm">📊 Ver Painel Completo</button>
                     </div>
                 </div>
             </div>
 
-            <!-- CARDS INFORMATIVOS DA HOME -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
-                    <div class="text-2xl mb-2">⚡</div>
-                    <h3 class="font-bold text-white mb-1 text-sm sm:text-base">Rápido & Prático</h3>
-                    <p class="text-xs text-slate-400">Lance entradas e saídas definindo a categoria e o mês de referência de forma ágil.</p>
-                </div>
-                <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
-                    <div class="text-2xl mb-2">🏷️</div>
-                    <h3 class="font-bold text-white mb-1 text-sm sm:text-base">Categorização Clara</h3>
-                    <p class="text-xs text-slate-400">Separe os gastos entre Moradia, Alimentação, Saúde, Lazer e muito mais.</p>
-                </div>
-                <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
-                    <div class="text-2xl mb-2">📈</div>
-                    <h3 class="font-bold text-white mb-1 text-sm sm:text-base">Visão Geral Completa</h3>
-                    <p class="text-xs text-slate-400">Analise todos os meses e anos em conjunto ou selecione um período específico.</p>
-                </div>
+                <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl"><div class="text-2xl mb-2">⚡</div><h3 class="font-bold text-white mb-1 text-sm">Rápido & Prático</h3><p class="text-xs text-slate-400">Lance entradas e saídas definindo a categoria e o mês de referência de forma ágil.</p></div>
+                <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl"><div class="text-2xl mb-2">🏷️</div><h3 class="font-bold text-white mb-1 text-sm">Categorização Clara</h3><p class="text-xs text-slate-400">Separe os gastos entre Moradia, Alimentação, Saúde, Lazer e muito mais.</p></div>
+                <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl"><div class="text-2xl mb-2">📈</div><h3 class="font-bold text-white mb-1 text-sm">Visão Geral Completa</h3><p class="text-xs text-slate-400">Analise todos os meses e anos em conjunto ou selecione um período específico.</p></div>
             </div>
         </section>
 
-        <!-- TELA 2: ENTRADA / REGISTRO DE TRANSAÇÃO -->
+        <!-- TELA 2: ENTRADA / REGISTRO -->
         <section id="tela-entrada" class="hidden space-y-6">
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
-                <!-- FORMULÁRIO DE CADASTRO -->
                 <div class="lg:col-span-1 bg-slate-900 border border-slate-800 p-5 sm:p-6 rounded-3xl h-fit">
-                    <h2 class="text-base sm:text-lg font-bold text-white mb-4 flex items-center gap-2">
-                        <span>📝</span> Novo Lançamento
-                    </h2>
+                    <h2 class="text-base sm:text-lg font-bold text-white mb-4 flex items-center gap-2"><span>📝</span> Novo Lançamento</h2>
 
                     <form id="form-transacao-direta" class="space-y-4">
                         <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700">
-                            <label class="block text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-1">
-                                📅 Mês de Referência
-                            </label>
+                            <label class="block text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-1">📅 Mês de Referência</label>
                             <input type="month" id="registro-mes-referencia" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
                         </div>
 
@@ -172,11 +131,8 @@
                     </form>
                 </div>
 
-                <!-- LISTA / TABELA DE REGISTROS -->
                 <div class="lg:col-span-2 bg-slate-900 border border-slate-800 p-5 sm:p-6 rounded-3xl">
                     <h2 class="text-base sm:text-lg font-bold text-white mb-4">📋 Registros Efetuados</h2>
-                    
-                    <!-- TABELA DESKTOP -->
                     <div class="hidden sm:block overflow-x-auto">
                         <table class="w-full text-left text-sm">
                             <thead>
@@ -193,31 +149,22 @@
                             <tbody id="tabela-registros-entrada" class="divide-y divide-slate-800/50"></tbody>
                         </table>
                     </div>
-
-                    <!-- CARDS MOBILE -->
                     <div id="cards-registros-entrada-mobile" class="sm:hidden space-y-3"></div>
                 </div>
-
             </div>
         </section>
 
         <!-- TELA 3: RESULTADO FINAL / DASHBOARD -->
         <section id="tela-resultado" class="hidden space-y-6">
-            
-            <!-- FILTROS -->
             <div class="bg-slate-900 border border-slate-800 p-4 sm:p-6 rounded-3xl">
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                     <div>
                         <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Ano</label>
-                        <select id="filtro-ano" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
-                            <option value="">Todos os Anos</option>
-                        </select>
+                        <select id="filtro-ano" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500"><option value="">Todos os Anos</option></select>
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Mês</label>
-                        <select id="filtro-mes" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
-                            <option value="">Todos os Meses</option>
-                        </select>
+                        <select id="filtro-mes" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500"><option value="">Todos os Meses</option></select>
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Pesquisar</label>
@@ -234,67 +181,163 @@
                 </div>
             </div>
 
-            <!-- CARDS TOTALIZADORES -->
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                <div class="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl">
-                    <span class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase">Receitas</span>
-                    <div id="total-receitas" class="text-lg sm:text-2xl font-extrabold text-emerald-400 mt-1">R$ 0,00</div>
-                </div>
-                <div class="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl">
-                    <span class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase">Despesas</span>
-                    <div id="total-despesas" class="text-lg sm:text-2xl font-extrabold text-rose-400 mt-1">R$ 0,00</div>
-                </div>
-                <div class="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl">
-                    <span class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase">Saldo Líquido</span>
-                    <div id="saldo-total" class="text-lg sm:text-2xl font-extrabold text-white mt-1">R$ 0,00</div>
-                </div>
-                <div class="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl">
-                    <span class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase">Comprometimento</span>
-                    <div id="dash-taxa" class="text-lg sm:text-2xl font-extrabold text-indigo-400 mt-1">0%</div>
-                </div>
+                <div class="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl"><span class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase">Receitas</span><div id="total-receitas" class="text-lg sm:text-2xl font-extrabold text-emerald-400 mt-1">R$ 0,00</div></div>
+                <div class="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl"><span class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase">Despesas</span><div id="total-despesas" class="text-lg sm:text-2xl font-extrabold text-rose-400 mt-1">R$ 0,00</div></div>
+                <div class="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl"><span class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase">Saldo Líquido</span><div id="saldo-total" class="text-lg sm:text-2xl font-extrabold text-white mt-1">R$ 0,00</div></div>
+                <div class="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl"><span class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase">Comprometimento</span><div id="dash-taxa" class="text-lg sm:text-2xl font-extrabold text-indigo-400 mt-1">0%</div></div>
             </div>
 
-            <!-- GRÁFICOS -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div class="bg-slate-900 border border-slate-800 p-4 sm:p-6 rounded-3xl">
-                    <h3 class="text-xs sm:text-sm font-bold text-white mb-4">Receitas vs Despesas</h3>
-                    <div class="relative h-56 sm:h-64 w-full">
-                        <canvas id="chartEvolucao"></canvas>
-                    </div>
-                </div>
-                <div class="bg-slate-900 border border-slate-800 p-4 sm:p-6 rounded-3xl">
-                    <h3 class="text-xs sm:text-sm font-bold text-white mb-4">Gastos por Categoria</h3>
-                    <div class="relative h-56 sm:h-64 w-full">
-                        <canvas id="chartCategorias"></canvas>
-                    </div>
-                </div>
+                <div class="bg-slate-900 border border-slate-800 p-4 sm:p-6 rounded-3xl"><h3 class="text-xs sm:text-sm font-bold text-white mb-4">Receitas vs Despesas</h3><div class="relative h-56 sm:h-64 w-full"><canvas id="chartEvolucao"></canvas></div></div>
+                <div class="bg-slate-900 border border-slate-800 p-4 sm:p-6 rounded-3xl"><h3 class="text-xs sm:text-sm font-bold text-white mb-4">Gastos por Categoria</h3><div class="relative h-56 sm:h-64 w-full"><canvas id="chartCategorias"></canvas></div></div>
             </div>
-
-            <!-- RELATÓRIO DETALHADO -->
-            <div class="bg-slate-900 border border-slate-800 p-4 sm:p-6 rounded-3xl">
-                <h3 class="text-base sm:text-lg font-bold text-white mb-4">📄 Histórico Filtrado</h3>
-                <div class="hidden sm:block overflow-x-auto">
-                    <table class="w-full text-left text-sm">
-                        <thead>
-                            <tr class="text-xs font-semibold text-slate-400 border-b border-slate-800 uppercase">
-                                <th class="p-3">Descrição</th>
-                                <th class="p-3">Tipo</th>
-                                <th class="p-3">Categoria</th>
-                                <th class="p-3">Data</th>
-                                <th class="p-3">Status</th>
-                                <th class="p-3 text-right">Valor</th>
-                            </tr>
-                        </thead>
-                        <tbody id="lista-transacoes" class="divide-y divide-slate-800/50"></tbody>
-                    </table>
-                </div>
-                <div id="cards-historico-mobile" class="sm:hidden space-y-3"></div>
-            </div>
-
         </section>
-
     </main>
 
-    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <!-- Script de Gestão de UI, Navegação e Envio da Transação -->
+    <script>
+        let transacoesGlobais = [];
+        let categoriasGlobais = [];
+
+        function navegarPara(tela) {
+            document.getElementById('tela-inicial').classList.add('hidden');
+            document.getElementById('tela-entrada').classList.add('hidden');
+            document.getElementById('tela-resultado').classList.add('hidden');
+
+            document.getElementById('nav-tela-inicial').className = "px-3 py-2 rounded-xl transition bg-slate-800 text-slate-300 hover:bg-slate-700";
+            document.getElementById('nav-tela-entrada').className = "px-3 py-2 rounded-xl transition bg-slate-800 text-slate-300 hover:bg-slate-700";
+            document.getElementById('nav-tela-resultado').className = "px-3 py-2 rounded-xl transition bg-slate-800 text-slate-300 hover:bg-slate-700";
+
+            if (tela === 'inicial') {
+                document.getElementById('tela-inicial').classList.remove('hidden');
+                document.getElementById('nav-tela-inicial').className = "px-3 py-2 rounded-xl transition bg-indigo-600 text-white font-semibold";
+            } else if (tela === 'entrada') {
+                document.getElementById('tela-entrada').classList.remove('hidden');
+                document.getElementById('nav-tela-entrada').className = "px-3 py-2 rounded-xl transition bg-indigo-600 text-white font-semibold";
+            } else if (tela === 'resultado') {
+                document.getElementById('tela-resultado').classList.remove('hidden');
+                document.getElementById('nav-tela-resultado').className = "px-3 py-2 rounded-xl transition bg-indigo-600 text-white font-semibold";
+            }
+        }
+
+        async function carregarCategorias() {
+            try {
+                const res = await fetch('/api/categorias');
+                categoriasGlobais = await res.json();
+            } catch (err) { console.error('Erro ao carregar categorias'); }
+        }
+
+        document.getElementById('trans-tipo').addEventListener('change', function() {
+            const tipo = this.value;
+            const selectCat = document.getElementById('trans-categoria');
+            selectCat.innerHTML = '<option value="" disabled selected>-- Selecione a Categoria --</option>';
+            
+            categoriasGlobais.filter(c => c.tipo === tipo).forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat.nome;
+                opt.textContent = cat.nome;
+                selectCat.appendChild(opt);
+            });
+        });
+
+        // Evento de Envio do Formulário Corrigido (Evita travamentos e envia JSON)
+        document.getElementById('form-transacao-direta').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const dados = {
+                descricao: document.getElementById('trans-descricao').value,
+                valor: document.getElementById('trans-valor').value,
+                tipo: document.getElementById('trans-tipo').value,
+                categoria: document.getElementById('trans-categoria').value,
+                status: document.getElementById('trans-status').value,
+                data: document.getElementById('trans-data').value
+            };
+
+            try {
+                const response = await fetch('/api/transacoes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dados)
+                });
+
+                if (response.ok) {
+                    const badge = document.getElementById('badge-salvo');
+                    badge.classList.remove('hidden');
+                    setTimeout(() => badge.classList.add('hidden'), 3000);
+                    document.getElementById('form-transacao-direta').reset();
+                    carregarTransacoes();
+                } else {
+                    alert('Erro ao guardar o lançamento.');
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+            }
+        });
+
+        async function carregarTransacoes() {
+            try {
+                const res = await fetch('/api/transacoes');
+                transacoesGlobais = await res.json();
+                renderizarTabela();
+            } catch (err) { console.error('Erro ao buscar transações'); }
+        }
+
+        function renderizarTabela() {
+            const tbody = document.getElementById('tabela-registros-entrada');
+            const cardsMobile = document.getElementById('cards-registros-entrada-mobile');
+            tbody.innerHTML = '';
+            cardsMobile.innerHTML = '';
+
+            transacoesGlobais.forEach(t => {
+                const corValor = t.tipo === 'receita' ? 'text-emerald-400' : 'text-rose-400';
+                const sinal = t.tipo === 'receita' ? '+' : '-';
+
+                // Tabela Desktop
+                tbody.innerHTML += `
+                    <tr class="border-b border-slate-800/50 hover:bg-slate-800/30">
+                        <td class="p-3 font-medium text-white">${t.descricao}</td>
+                        <td class="p-3 capitalize text-slate-300">${t.tipo}</td>
+                        <td class="p-3 text-slate-300">${t.categoria}</td>
+                        <td class="p-3 text-slate-300">${t.data}</td>
+                        <td class="p-3 text-slate-300">${t.status}</td>
+                        <td class="p-3 text-right font-bold ${corValor}">${sinal} R$ ${t.valor.toFixed(2)}</td>
+                        <td class="p-3 text-right">
+                            <button onclick="removerTransacao(${t.id})" class="text-rose-400 hover:text-rose-300 text-xs font-bold px-2 py-1 bg-rose-500/10 rounded-lg">Excluir</button>
+                        </td>
+                    </tr>
+                `;
+
+                // Cards Mobile
+                cardsMobile.innerHTML += `
+                    <div class="bg-slate-950 border border-slate-800 p-3 rounded-xl flex justify-between items-center">
+                        <div>
+                            <div class="font-bold text-white text-sm">${t.descricao}</div>
+                            <div class="text-[11px] text-slate-400">${t.categoria} • ${t.data}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-extrabold text-sm ${corValor}">${sinal} R$ ${t.valor.toFixed(2)}</div>
+                            <button onclick="removerTransacao(${t.id})" class="text-rose-400 text-[10px] font-bold mt-1">Excluir</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        async function removerTransacao(id) {
+            if (!confirm('Deseja remover este registro?')) return;
+            await fetch(`/api/transacoes/${id}`, { method: 'DELETE' });
+            carregarTransacoes();
+        }
+
+        async function fazerLogout() {
+            await fetch('/api/logout', { method: 'POST' });
+            window.location.reload();
+        }
+
+        // Inicializar dados na abertura
+        carregarCategorias();
+        carregarTransacoes();
+    </script>
 </body>
 </html>
