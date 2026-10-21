@@ -6,7 +6,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 
-# Configurações de Segurança de Sessão e Cookies
 app.secret_key = os.environ.get('SECRET_KEY', 'chave_secreta_padrao_desenvolvimento_123')
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
@@ -31,57 +30,59 @@ def get_db():
         return conn
 
 def init_db():
-    conn = get_db()
-    cursor = conn.cursor()
-    is_postgres = DATABASE_URL is not None
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        is_postgres = DATABASE_URL is not None
 
-    pk_auto = "SERIAL PRIMARY KEY" if is_postgres else "INTEGER PRIMARY KEY AUTOINCREMENT"
+        pk_auto = "SERIAL PRIMARY KEY" if is_postgres else "INTEGER PRIMARY KEY AUTOINCREMENT"
 
-    cursor.execute(f'''
-        CREATE TABLE IF NOT EXISTS usuarios (
-            id {pk_auto},
-            nome TEXT NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            senha_hash TEXT NOT NULL,
-            is_admin INTEGER DEFAULT 0
-        )
-    ''')
+        cursor.execute(f'''
+            CREATE TABLE IF NOT EXISTS usuarios (
+                id {pk_auto},
+                nome TEXT NOT NULL,
+                email TEXT UNIQUE NOT NULL,
+                senha_hash TEXT NOT NULL,
+                is_admin INTEGER DEFAULT 0
+            )
+        ''')
 
-    cursor.execute(f'''
-        CREATE TABLE IF NOT EXISTS transacoes (
-            id {pk_auto},
-            usuario_id INTEGER NOT NULL,
-            descricao TEXT NOT NULL,
-            valor REAL NOT NULL,
-            tipo TEXT NOT NULL,
-            categoria TEXT NOT NULL,
-            status TEXT NOT NULL,
-            data TEXT NOT NULL,
-            FOREIGN KEY (usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE
-        )
-    ''')
+        cursor.execute(f'''
+            CREATE TABLE IF NOT EXISTS transacoes (
+                id {pk_auto},
+                usuario_id INTEGER NOT NULL,
+                descricao TEXT NOT NULL,
+                valor REAL NOT NULL,
+                tipo TEXT NOT NULL,
+                categoria TEXT NOT NULL,
+                status TEXT NOT NULL,
+                data TEXT NOT NULL
+            )
+        ''')
 
-    cursor.execute(f'''
-        CREATE TABLE IF NOT EXISTS categorias (
-            id {pk_auto},
-            nome TEXT NOT NULL,
-            tipo TEXT NOT NULL
-        )
-    ''')
+        cursor.execute(f'''
+            CREATE TABLE IF NOT EXISTS categorias (
+                id {pk_auto},
+                nome TEXT NOT NULL,
+                tipo TEXT NOT NULL
+            )
+        ''')
 
-    cursor.execute("SELECT COUNT(*) FROM categorias")
-    count = cursor.fetchone()[0]
-    if count == 0:
-        cats = [
-            ('Salário', 'receita'), ('Investimentos', 'receita'), ('Freelance', 'receita'), ('Presente', 'receita'),
-            ('Alimentação', 'despesa'), ('Moradia', 'despesa'), ('Transporte', 'despesa'),
-            ('Lazer', 'despesa'), ('Saúde', 'despesa'), ('Educação', 'despesa'), ('Outros', 'despesa')
-        ]
-        ph = "%s, %s" if is_postgres else "?, ?"
-        cursor.executemany(f"INSERT INTO categorias (nome, tipo) VALUES ({ph})", cats)
+        cursor.execute("SELECT COUNT(*) FROM categorias")
+        count = cursor.fetchone()[0]
+        if count == 0:
+            cats = [
+                ('Salário', 'receita'), ('Investimentos', 'receita'), ('Freelance', 'receita'), ('Presente', 'receita'),
+                ('Alimentação', 'despesa'), ('Moradia', 'despesa'), ('Transporte', 'despesa'),
+                ('Lazer', 'despesa'), ('Saúde', 'despesa'), ('Educação', 'despesa'), ('Outros', 'despesa')
+            ]
+            ph = "%s, %s" if is_postgres else "?, ?"
+            cursor.executemany(f"INSERT INTO categorias (nome, tipo) VALUES ({ph})", cats)
 
-    conn.commit()
-    conn.close()
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Erro ao inicializar base de dados: {e}")
 
 init_db()
 
@@ -98,6 +99,10 @@ def index():
     if 'usuario_id' not in session:
         return render_template('login.html')
     return render_template('index.html', usuario_nome=session.get('usuario_nome'))
+
+@app.route('/home')
+def home():
+    return render_template('home.html')
 
 @app.route('/api/cadastro', methods=['POST'])
 def cadastro():
@@ -129,7 +134,7 @@ def cadastro():
         session['is_admin'] = 0
         conn.close()
         return jsonify({'message': 'Conta criada com sucesso!'}), 201
-    except Exception:
+    except Exception as e:
         conn.close()
         return jsonify({'error': 'Este e-mail já está em uso.'}), 400
 
@@ -162,73 +167,85 @@ def logout():
 @app.route('/api/transacoes', methods=['GET'])
 @login_required
 def get_transacoes():
-    conn = get_db()
-    cursor = conn.cursor()
-    ph = "%s" if DATABASE_URL else "?"
-    cursor.execute(f"SELECT id, descricao, valor, tipo, categoria, status, data FROM transacoes WHERE usuario_id = {ph} ORDER BY data DESC", (session['usuario_id'],))
-    rows = cursor.fetchall()
-    conn.close()
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        ph = "%s" if DATABASE_URL else "?"
+        cursor.execute(f"SELECT id, descricao, valor, tipo, categoria, status, data FROM transacoes WHERE usuario_id = {ph} ORDER BY data DESC", (session['usuario_id'],))
+        rows = cursor.fetchall()
+        conn.close()
 
-    resultado = [
-        {
-            'id': row['id'],
-            'descricao': row['descricao'],
-            'valor': float(row['valor']),
-            'tipo': row['tipo'],
-            'categoria': row['categoria'],
-            'status': row['status'],
-            'data': row['data']
-        } for row in rows
-    ]
-    return jsonify(resultado)
+        resultado = [
+            {
+                'id': row['id'],
+                'descricao': row['descricao'],
+                'valor': float(row['valor']),
+                'tipo': row['tipo'],
+                'categoria': row['categoria'],
+                'status': row['status'],
+                'data': row['data']
+            } for row in rows
+        ]
+        return jsonify(resultado)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/transacoes', methods=['POST'])
 @login_required
 def add_transacao():
-    dados = request.get_json() or {}
-    conn = get_db()
-    cursor = conn.cursor()
-    is_postgres = DATABASE_URL is not None
-    ph = "%s, %s, %s, %s, %s, %s, %s" if is_postgres else "?, ?, ?, ?, ?, ?, ?"
-    
-    cursor.execute(f"""
-        INSERT INTO transacoes (usuario_id, descricao, valor, tipo, categoria, status, data)
-        VALUES ({ph})
-    """, (
-        session['usuario_id'],
-        dados.get('descricao'),
-        round(float(dados.get('valor', 0)), 2),
-        str(dados.get('tipo', 'despesa')).lower(),
-        dados.get('categoria', 'Outros'),
-        dados.get('status', 'Pago/Recebido'),
-        dados.get('data')
-    ))
-    conn.commit()
-    conn.close()
-    return jsonify({'message': 'Transação salva com sucesso!'}), 201
+    try:
+        dados = request.get_json() or {}
+        conn = get_db()
+        cursor = conn.cursor()
+        is_postgres = DATABASE_URL is not None
+        ph = "%s, %s, %s, %s, %s, %s, %s" if is_postgres else "?, ?, ?, ?, ?, ?, ?"
+        
+        cursor.execute(f"""
+            INSERT INTO transacoes (usuario_id, descricao, valor, tipo, categoria, status, data)
+            VALUES ({ph})
+        """, (
+            session['usuario_id'],
+            dados.get('descricao'),
+            round(float(dados.get('valor', 0)), 2),
+            str(dados.get('tipo', 'despesa')).lower(),
+            dados.get('categoria', 'Outros'),
+            dados.get('status', 'Pago/Recebido'),
+            dados.get('data')
+        ))
+        conn.commit()
+        conn.close()
+        return jsonify({'message': 'Transação salva com sucesso!'}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/transacoes/<int:transacao_id>', methods=['DELETE'])
 @login_required
 def delete_transacao(transacao_id):
-    conn = get_db()
-    cursor = conn.cursor()
-    is_postgres = DATABASE_URL is not None
-    if is_postgres:
-        cursor.execute("DELETE FROM transacoes WHERE id = %s AND usuario_id = %s", (transacao_id, session['usuario_id']))
-    else:
-        cursor.execute("DELETE FROM transacoes WHERE id = ? AND usuario_id = ?", (transacao_id, session['usuario_id']))
-    conn.commit()
-    conn.close()
-    return jsonify({'message': 'Transação removida.'})
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        is_postgres = DATABASE_URL is not None
+        if is_postgres:
+            cursor.execute("DELETE FROM transacoes WHERE id = %s AND usuario_id = %s", (transacao_id, session['usuario_id']))
+        else:
+            cursor.execute("DELETE FROM transacoes WHERE id = ? AND usuario_id = ?", (transacao_id, session['usuario_id']))
+        conn.commit()
+        conn.close()
+        return jsonify({'message': 'Transação removida.'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/categorias', methods=['GET'])
 def get_categorias():
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, nome, tipo FROM categorias")
-    rows = cursor.fetchall()
-    conn.close()
-    return jsonify([{'id': r['id'], 'nome': r['nome'], 'tipo': r['tipo']} for r in rows])
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, nome, tipo FROM categorias")
+        rows = cursor.fetchall()
+        conn.close()
+        return jsonify([{'id': r['id'], 'nome': r['nome'], 'tipo': r['tipo']} for r in rows])
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
