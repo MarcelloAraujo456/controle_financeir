@@ -58,7 +58,7 @@ def init_db():
         except Exception:
             pass
 
-        # Tabela de Transações
+       # Tabela de Transações
         cursor.execute(f'''
             CREATE TABLE IF NOT EXISTS transacoes (
                 id {pk_auto},
@@ -71,6 +71,12 @@ def init_db():
                 data TEXT NOT NULL
             )
         ''')
+
+        # Migração automática para garantir colunas em transacoes caso a tabela já exista no SQLite
+        try:
+            cursor.execute("ALTER TABLE transacoes ADD COLUMN usuario_id INTEGER DEFAULT 1;")
+        except Exception:
+            pass
 
         # Tabela de Categorias
         cursor.execute(f'''
