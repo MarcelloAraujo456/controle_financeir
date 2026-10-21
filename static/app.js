@@ -158,10 +158,18 @@ async function carregarTransacoes() {
             window.location.reload();
             return;
         }
-        transacoes = await res.json();
+        const data = await res.json();
+        // Garante que se o servidor retornar um erro em JSON, não quebra a aplicação
+        if (Array.isArray(data)) {
+            transacoes = data;
+        } else {
+            transacoes = [];
+        }
         renderizarRegistrosEntrada();
     } catch (err) {
         console.error("Erro ao carregar transações:", err);
+        transacoes = [];
+        renderizarRegistrosEntrada();
     }
 }
 

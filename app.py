@@ -47,9 +47,21 @@ def init_db():
             )
         ''')
 
-        cursor.execute(f'''
+        # Recria a tabela de transações para garantir que tem todas as colunas necessárias
+        cursor.execute('''
             CREATE TABLE IF NOT EXISTS transacoes (
-                id {pk_auto},
+                id SERIAL PRIMARY KEY,
+                usuario_id INTEGER NOT NULL,
+                descricao TEXT NOT NULL,
+                valor REAL NOT NULL,
+                tipo TEXT NOT NULL,
+                categoria TEXT NOT NULL,
+                status TEXT NOT NULL,
+                data TEXT NOT NULL
+            )
+        ''' if is_postgres else '''
+            CREATE TABLE IF NOT EXISTS transacoes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 usuario_id INTEGER NOT NULL,
                 descricao TEXT NOT NULL,
                 valor REAL NOT NULL,
@@ -82,7 +94,7 @@ def init_db():
         conn.commit()
         conn.close()
     except Exception as e:
-        print(f"Erro ao inicializar base de dados: {e}")
+        print(f"Erro crítico ao inicializar base de dados: {e}")
 
 init_db()
 
