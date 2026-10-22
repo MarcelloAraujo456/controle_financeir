@@ -72,7 +72,6 @@ def init_db():
             )
         ''')
 
-        # Migração automática para garantir colunas em transacoes caso a tabela já exista no SQLite
         try:
             cursor.execute("ALTER TABLE transacoes ADD COLUMN usuario_id INTEGER DEFAULT 1;")
         except Exception:
@@ -96,14 +95,12 @@ def init_db():
         # Recria as categorias padrão garantindo que os tipos de conta estão corretos
         cursor.execute("DELETE FROM categorias;")
         cats = [
-            # --- PESSOAL ---
             ('Salário', 'receita', 'pessoal'), ('Investimentos', 'receita', 'pessoal'), 
             ('Freelance', 'receita', 'pessoal'), ('Presente', 'receita', 'pessoal'),
             ('Alimentação', 'despesa', 'pessoal'), ('Moradia', 'despesa', 'pessoal'), 
             ('Transporte', 'despesa', 'pessoal'), ('Lazer', 'despesa', 'pessoal'), 
             ('Saúde', 'despesa', 'pessoal'), ('Educação', 'despesa', 'pessoal'), ('Outros', 'despesa', 'pessoal'),
             
-            # --- EMPRESARIAL ---
             ('Vendas de Produtos', 'receita', 'empresarial'), ('Prestação de Serviços', 'receita', 'empresarial'), 
             ('Outras Receitas', 'receita', 'empresarial'),
             ('Fornecedores / Estoque', 'despesa', 'empresarial'), ('Folha de Pagamento', 'despesa', 'empresarial'), 
