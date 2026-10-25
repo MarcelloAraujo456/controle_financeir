@@ -44,17 +44,22 @@ async function navegarPara(tela) {
 // Carregar Categorias da API (filtradas por tipo de conta no servidor)
 async function carregarCategorias() {
     try {
-        const res = await fetch('/api/categorias');
-        if (res.ok) {
-            const dados = await res.json();
-            if (dados && dados.length > 0) {
-                categorias = dados;
-            }
-        }
-    } catch (err) {
-        console.error("Erro ao carregar categorias do servidor:", err);
-    }
-}
+                       const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    window.location.reload();
+                } else {
+                    // Log the specific error from the server to help debugging
+                    console.error('Login failed:', res.status, data);
+                    msgErro.innerText = data.error || 'Usuário ou senha inválidos.';
+                    msgErro.classList.remove('hidden');
+                }
 
 // Atualizar select de Categorias pelo Tipo (com suporte total a maiúsculas/minúsculas)
 const elTransTipo = document.getElementById('trans-tipo');
